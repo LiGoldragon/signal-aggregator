@@ -238,22 +238,59 @@ fn operation_heads_are_contract_local() {
     );
 }
 
-#[test]
-fn schema_sketch_names_current_operation_and_reply_heads() {
-    let schema = include_str!("../schema/signal.schema");
-    for expected in [
-        "(Collect [EvidenceRequest])",
-        "(Version [Version])",
-        "(EvidenceCollected [EvidencePackage])",
-        "(VersionReported [VersionReport])",
-        "(EvidenceRejected [EvidenceRejected])",
-        "(Status Scaffold)",
-    ] {
+const EXPECTED_SCHEMA_SKETCH: &str = "{}\n\n[\n  (Collect [EvidenceRequest])\n  (Version [Version])\n]\n\n[\n  (EvidenceCollected [EvidencePackage])\n  (VersionReported [VersionReport])\n  (EvidenceRejected [EvidenceRejected])\n]\n\n[]\n\n{\n  EvidenceRequest (RequestIdentifier TimeWindow SourceSelection Projection LimitPolicy)\n  TimeWindow [Recent Range Since]\n  Recent (RelativeDuration)\n  Range (TimeRange)\n  Since (Timestamp)\n  RelativeDuration (DurationAmount DurationUnit)\n  DurationUnit [Minutes Hours Days]\n  TimeRange (Timestamp Timestamp)\n  SourceSelection [AllConfigured Only]\n  AllConfigured\n  Only ([SourceKind])\n  SourceKind [Claude Codex Pi Repository]\n  Projection [MetadataOnly IdentifiersOnly BoundedText]\n  BoundedText (ByteLimit)\n  LimitPolicy (SegmentLimit ByteLimit)\n  EvidencePackage (PackageIdentifier RequestIdentifier TimeWindow Timestamp [SourceVolume] [TranscriptSegment] [RepositoryChange] [Truncation] [ReadFailure])\n  Version (?ContractName)\n  EvidenceRejected (RequestIdentifier OperationKind RejectionReason)\n}\n\n[\n  (Version 0 1)\n  (Status Scaffold)\n]\n";
+
+struct SchemaSketchWitness {
+    full_text: &'static str,
+    expected_operation_heads: &'static [&'static str],
+    expected_reply_heads: &'static [&'static str],
+    expected_data_heads: &'static [&'static str],
+}
+
+impl SchemaSketchWitness {
+    fn assert_matches_contract(self) {
+        assert_eq!(
+            self.full_text, EXPECTED_SCHEMA_SKETCH,
+            "schema sketch drifted; update the complete manual witness with any intentional schema change"
+        );
+        assert_eq!(
+            <AggregatorRequest as SignalOperationHeads>::HEADS,
+            self.expected_operation_heads,
+            "exported operation heads drifted from the schema sketch"
+        );
+        for head in self.expected_reply_heads {
+            assert!(
+                self.full_text.contains(&format!("  ({head} [")),
+                "schema sketch is missing reply head {head}"
+            );
+        }
+        for head in self.expected_data_heads {
+            assert!(
+                self.full_text.contains(&format!("  {head} ")),
+                "schema sketch is missing data/config/evidence head {head}"
+            );
+        }
         assert!(
-            schema.contains(expected),
-            "schema sketch is missing expected contract surface {expected}"
+            self.full_text.ends_with("  (Status Scaffold)\n]\n"),
+            "schema sketch scaffold status drifted"
         );
     }
+}
+
+#[test]
+fn schema_sketch_matches_complete_manual_contract_witness() {
+    SchemaSketchWitness {
+        full_text: include_str!("../schema/signal.schema"),
+        expected_operation_heads: &["Collect", "Version"],
+        expected_reply_heads: &["EvidenceCollected", "VersionReported", "EvidenceRejected"],
+        expected_data_heads: &[
+            "EvidenceRequest",
+            "EvidencePackage",
+            "Version",
+            "EvidenceRejected",
+        ],
+    }
+    .assert_matches_contract();
 }
 
 #[test]
