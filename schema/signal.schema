@@ -1,0 +1,40 @@
+{}
+
+[
+  (Collect [EvidenceRequest])
+  (Version [Version])
+]
+
+[
+  (EvidenceCollected [EvidencePackage])
+  (VersionReported [VersionReport])
+  (EvidenceRejected [Rejection])
+]
+
+[]
+
+{
+  EvidenceRequest (RequestIdentifier TimeWindow SourceSelection Projection LimitPolicy)
+  TimeWindow [Recent Range Since]
+  Recent (RelativeDuration)
+  Range (TimeRange)
+  Since (Timestamp)
+  RelativeDuration (DurationAmount DurationUnit)
+  DurationUnit [Minutes Hours Days]
+  TimeRange (Timestamp Timestamp)
+  SourceSelection [AllConfigured Only]
+  AllConfigured
+  Only ([SourceKind])
+  SourceKind [Claude Codex Pi Repository]
+  Projection [MetadataOnly IdentifiersOnly BoundedText]
+  BoundedText (ByteLimit)
+  LimitPolicy (SegmentLimit ByteLimit)
+  EvidencePackage (PackageIdentifier RequestIdentifier TimeWindow Timestamp [SourceVolume] [TranscriptSegment] [RepositoryChange] [Truncation] [ReadFailure])
+  Version (?ContractName)
+  Rejection (RequestIdentifier OperationKind RejectionReason)
+}
+
+[
+  (Version 0 1)
+  (Status Scaffold)
+]
