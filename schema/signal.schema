@@ -8,7 +8,7 @@
 [
   (EvidenceCollected [EvidencePackage])
   (VersionReported [VersionReport])
-  (EvidenceRejected [Rejection])
+  (EvidenceRejected [EvidenceRejected])
 ]
 
 []
@@ -31,7 +31,7 @@
   LimitPolicy (SegmentLimit ByteLimit)
   EvidencePackage (PackageIdentifier RequestIdentifier TimeWindow Timestamp [SourceVolume] [TranscriptSegment] [RepositoryChange] [Truncation] [ReadFailure])
   Version (?ContractName)
-  Rejection (RequestIdentifier OperationKind RejectionReason)
+  EvidenceRejected (RequestIdentifier OperationKind RejectionReason)
 }
 
 [

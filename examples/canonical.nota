@@ -1,5 +1,5 @@
 (Collect (req-20260705 (Recent (6 Hours)) (Only ([Claude Codex Repository])) MetadataOnly (32 4096)))
-(Version ((None)))
-(EvidenceCollected (pkg-20260705 req-20260705 (Recent (6 Hours)) 20260705T130000Z ([]) ([]) ([]) ([]) ([])))
+(Version (None))
+(EvidenceCollected (pkg-20260705 req-20260705 (Recent (6 Hours)) 20260705T130000Z [] [] [] [] []))
 (VersionReported (signal-aggregator 0.1.0))
 (EvidenceRejected (req-20260705 Collect UnsupportedProjection))

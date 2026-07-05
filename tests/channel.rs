@@ -3,8 +3,8 @@ use signal_aggregator::{
     AggregatorFrame, AggregatorFrameBody, AggregatorOperationKind, AggregatorReply,
     AggregatorRequest, ByteLimit, ContractName, ContractVersion, DurationAmount, DurationUnit,
     EvidencePackage, EvidenceRejected, EvidenceRequest, LimitPolicy, PackageIdentifier, Projection,
-    RejectionReason, RelativeDuration, RequestIdentifier, SegmentLimit, SourceSelection,
-    TimeWindow, Timestamp, Version, VersionReport,
+    RejectionReason, RelativeDuration, RequestIdentifier, SegmentLimit, SelectedSources,
+    SourceKind, SourceSelection, TimeWindow, Timestamp, Version, VersionReport,
 };
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
@@ -84,6 +84,44 @@ where
     assert_eq!(decoded, value);
 }
 
+fn assert_canonical_nota<Value>(value: Value, canonical_text: &str)
+where
+    Value: NotaEncode + NotaDecode + PartialEq + std::fmt::Debug,
+{
+    let encoded = value.to_nota();
+    assert_eq!(encoded, canonical_text, "canonical encode for {value:?}");
+    let decoded = NotaSource::new(canonical_text)
+        .parse::<Value>()
+        .expect("canonical decode");
+    assert_eq!(decoded, value, "canonical decode for {canonical_text}");
+    assert!(
+        include_str!("../examples/canonical.nota").contains(canonical_text),
+        "examples/canonical.nota missing line: {canonical_text}"
+    );
+}
+
+fn canonical_evidence_request() -> EvidenceRequest {
+    EvidenceRequest {
+        request_identifier: RequestIdentifier::new("req-20260705"),
+        time_window: TimeWindow::Recent(RelativeDuration {
+            amount: DurationAmount::new(6),
+            unit: DurationUnit::Hours,
+        }),
+        source_selection: SourceSelection::Only(SelectedSources {
+            sources: vec![
+                SourceKind::Claude,
+                SourceKind::Codex,
+                SourceKind::Repository,
+            ],
+        }),
+        projection: Projection::MetadataOnly,
+        limit_policy: LimitPolicy {
+            maximum_segments: SegmentLimit::new(32),
+            maximum_bytes: ByteLimit::new(4096),
+        },
+    }
+}
+
 #[test]
 fn collect_request_round_trips_through_frame() {
     let request = AggregatorRequest::Collect(evidence_request());
@@ -128,6 +166,54 @@ fn version_request_and_reply_round_trip_through_nota() {
 #[test]
 fn collect_request_round_trips_through_nota() {
     round_trip_nota(AggregatorRequest::Collect(evidence_request()));
+}
+
+#[test]
+fn canonical_request_examples_round_trip() {
+    assert_canonical_nota(
+        AggregatorRequest::Collect(canonical_evidence_request()),
+        "(Collect (req-20260705 (Recent (6 Hours)) (Only ([Claude Codex Repository])) MetadataOnly (32 4096)))",
+    );
+    assert_canonical_nota(
+        AggregatorRequest::Version(Version { client_name: None }),
+        "(Version (None))",
+    );
+}
+
+#[test]
+fn canonical_reply_examples_round_trip() {
+    assert_canonical_nota(
+        AggregatorReply::EvidenceCollected(EvidencePackage {
+            package_identifier: PackageIdentifier::new("pkg-20260705"),
+            request_identifier: RequestIdentifier::new("req-20260705"),
+            time_window: TimeWindow::Recent(RelativeDuration {
+                amount: DurationAmount::new(6),
+                unit: DurationUnit::Hours,
+            }),
+            collected_at: Timestamp::new("20260705T130000Z"),
+            source_volumes: vec![],
+            transcript_segments: vec![],
+            repository_changes: vec![],
+            truncations: vec![],
+            read_failures: vec![],
+        }),
+        "(EvidenceCollected (pkg-20260705 req-20260705 (Recent (6 Hours)) 20260705T130000Z [] [] [] [] []))",
+    );
+    assert_canonical_nota(
+        AggregatorReply::VersionReported(VersionReport {
+            contract_name: ContractName::new("signal-aggregator"),
+            contract_version: ContractVersion::new("0.1.0"),
+        }),
+        "(VersionReported (signal-aggregator 0.1.0))",
+    );
+    assert_canonical_nota(
+        AggregatorReply::EvidenceRejected(EvidenceRejected {
+            request_identifier: RequestIdentifier::new("req-20260705"),
+            operation: AggregatorOperationKind::Collect,
+            reason: RejectionReason::UnsupportedProjection,
+        }),
+        "(EvidenceRejected (req-20260705 Collect UnsupportedProjection))",
+    );
 }
 
 #[test]
