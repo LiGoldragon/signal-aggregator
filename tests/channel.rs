@@ -239,6 +239,24 @@ fn operation_heads_are_contract_local() {
 }
 
 #[test]
+fn schema_sketch_names_current_operation_and_reply_heads() {
+    let schema = include_str!("../schema/signal.schema");
+    for expected in [
+        "(Collect [EvidenceRequest])",
+        "(Version [Version])",
+        "(EvidenceCollected [EvidencePackage])",
+        "(VersionReported [VersionReport])",
+        "(EvidenceRejected [EvidenceRejected])",
+        "(Status Scaffold)",
+    ] {
+        assert!(
+            schema.contains(expected),
+            "schema sketch is missing expected contract surface {expected}"
+        );
+    }
+}
+
+#[test]
 fn contract_has_no_synthesis_reply() {
     let reply_text = AggregatorReply::EvidenceRejected(EvidenceRejected {
         request_identifier: request_identifier(),
