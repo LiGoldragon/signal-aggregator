@@ -84,20 +84,38 @@ where
     assert_eq!(decoded, value);
 }
 
-fn assert_canonical_nota<Value>(value: Value, canonical_text: &str)
-where
-    Value: NotaEncode + NotaDecode + PartialEq + std::fmt::Debug,
-{
-    let encoded = value.to_nota();
-    assert_eq!(encoded, canonical_text, "canonical encode for {value:?}");
-    let decoded = NotaSource::new(canonical_text)
-        .parse::<Value>()
-        .expect("canonical decode");
-    assert_eq!(decoded, value, "canonical decode for {canonical_text}");
-    assert!(
-        include_str!("../examples/canonical.nota").contains(canonical_text),
-        "examples/canonical.nota missing line: {canonical_text}"
-    );
+enum CanonicalExample {
+    Request(AggregatorRequest),
+    Reply(AggregatorReply),
+}
+
+impl CanonicalExample {
+    fn assert_matches_line(&self, line: &str) {
+        match self {
+            Self::Request(expected) => {
+                let decoded = NotaSource::new(line)
+                    .parse::<AggregatorRequest>()
+                    .expect("canonical request decode");
+                assert_eq!(&decoded, expected, "canonical request decode for {line}");
+                assert_eq!(decoded.to_nota(), line, "canonical request encode");
+            }
+            Self::Reply(expected) => {
+                let decoded = NotaSource::new(line)
+                    .parse::<AggregatorReply>()
+                    .expect("canonical reply decode");
+                assert_eq!(&decoded, expected, "canonical reply decode for {line}");
+                assert_eq!(decoded.to_nota(), line, "canonical reply encode");
+            }
+        }
+    }
+}
+
+fn canonical_example_lines() -> Vec<&'static str> {
+    include_str!("../examples/canonical.nota")
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect()
 }
 
 fn canonical_evidence_request() -> EvidenceRequest {
@@ -169,21 +187,11 @@ fn collect_request_round_trips_through_nota() {
 }
 
 #[test]
-fn canonical_request_examples_round_trip() {
-    assert_canonical_nota(
-        AggregatorRequest::Collect(canonical_evidence_request()),
-        "(Collect (req-20260705 (Recent (6 Hours)) (Only ([Claude Codex Repository])) MetadataOnly (32 4096)))",
-    );
-    assert_canonical_nota(
-        AggregatorRequest::Version(Version { client_name: None }),
-        "(Version (None))",
-    );
-}
-
-#[test]
-fn canonical_reply_examples_round_trip() {
-    assert_canonical_nota(
-        AggregatorReply::EvidenceCollected(EvidencePackage {
+fn canonical_examples_match_file_order_and_boundaries() {
+    let expected_examples = [
+        CanonicalExample::Request(AggregatorRequest::Collect(canonical_evidence_request())),
+        CanonicalExample::Request(AggregatorRequest::Version(Version { client_name: None })),
+        CanonicalExample::Reply(AggregatorReply::EvidenceCollected(EvidencePackage {
             package_identifier: PackageIdentifier::new("pkg-20260705"),
             request_identifier: RequestIdentifier::new("req-20260705"),
             time_window: TimeWindow::Recent(RelativeDuration {
@@ -196,24 +204,26 @@ fn canonical_reply_examples_round_trip() {
             repository_changes: vec![],
             truncations: vec![],
             read_failures: vec![],
-        }),
-        "(EvidenceCollected (pkg-20260705 req-20260705 (Recent (6 Hours)) 20260705T130000Z [] [] [] [] []))",
-    );
-    assert_canonical_nota(
-        AggregatorReply::VersionReported(VersionReport {
+        })),
+        CanonicalExample::Reply(AggregatorReply::VersionReported(VersionReport {
             contract_name: ContractName::new("signal-aggregator"),
             contract_version: ContractVersion::new("0.1.0"),
-        }),
-        "(VersionReported (signal-aggregator 0.1.0))",
-    );
-    assert_canonical_nota(
-        AggregatorReply::EvidenceRejected(EvidenceRejected {
+        })),
+        CanonicalExample::Reply(AggregatorReply::EvidenceRejected(EvidenceRejected {
             request_identifier: RequestIdentifier::new("req-20260705"),
             operation: AggregatorOperationKind::Collect,
             reason: RejectionReason::UnsupportedProjection,
-        }),
-        "(EvidenceRejected (req-20260705 Collect UnsupportedProjection))",
+        })),
+    ];
+    let actual_lines = canonical_example_lines();
+    assert_eq!(
+        actual_lines.len(),
+        expected_examples.len(),
+        "canonical example count changed"
     );
+    for (expected, line) in expected_examples.iter().zip(actual_lines) {
+        expected.assert_matches_line(line);
+    }
 }
 
 #[test]
