@@ -248,6 +248,9 @@ pub struct SourceVolume {
     pub latest_timestamp: Option<Timestamp>,
 }
 
+/// Half-open line interval over a text projection. `start` is the first
+/// included one-based line number and `end` is the first excluded one-based line
+/// number. A range with `end < start` is invalid.
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
@@ -256,6 +259,10 @@ pub struct LineRange {
     pub end: LineNumber,
 }
 
+/// Half-open byte interval over UTF-8 text bytes. `start` is the first included
+/// zero-based byte offset and `end` is the first excluded zero-based byte offset.
+/// The selected byte count is `end - start` when the range is valid; a range
+/// with `end < start` is invalid.
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
@@ -336,6 +343,10 @@ pub enum TruncationReason {
     ProjectionLimit,
 }
 
+/// Truncation fact for a bounded text projection. `original_bytes` names the
+/// full source byte count when known; `projected_bytes` names the UTF-8 bytes
+/// delivered after the projection, range, and limit are applied. For an excerpt
+/// carrying this record, `projected_bytes` matches the excerpt `byte_count`.
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
@@ -422,6 +433,13 @@ pub struct SizeMetadata {
     pub certainty: SizeCertainty,
 }
 
+/// Deterministic order for a paged listing.
+///
+/// The chronology key is session `last_observed_at` falling back to
+/// `started_at`, subagent `last_observed_at` falling back to `first_observed_at`,
+/// output `provenance.produced_at`, and output segment `segment_index`. Missing
+/// timestamp keys sort after present timestamp keys in both chronological
+/// directions.
 #[derive(
     Archive,
     RkyvSerialize,
@@ -436,8 +454,11 @@ pub struct SizeMetadata {
     Hash,
 )]
 pub enum ListingOrder {
+    /// Ascending chronology key; equal keys break by fragile reference ascending.
     OldestFirst,
+    /// Descending chronology key; equal keys break by fragile reference ascending.
     NewestFirst,
+    /// Fragile reference ascending, with no chronology key in the sort.
     ReferenceAscending,
 }
 

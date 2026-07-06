@@ -14,5 +14,5 @@
 (OutputsListed (req-outputs [(fragile-output-1 fragile-session-1 (Some fragile-subagent-1) (Some worker-output) (Claude claude-transcript-1 AgentAuthored (Some 20260705T130000Z)) ((Some 256) (Some 8) (Some 2) Exact) (Some (preview-text 12 None)))] (2 1 (Some 4) (Some fragile-page-2) NewestFirst)))
 (OutputSegmentsListed (req-segments [(fragile-segment-1 fragile-output-1 0 (Some (0 64)) (Some (1 4)) ((Some 256) (Some 8) (Some 2) Exact) (Some (preview-text 12 None)))] (2 1 (Some 4) (Some fragile-page-2) NewestFirst)))
 (OutputEstimated (req-estimate fragile-output-1 EntireOutput ((Some 512) (Some 16) (Some 4) Estimated)))
-(OutputRead (req-read fragile-output-1 (Bytes (0 64)) ((Some 512) (Some 16) (Some 4) Estimated) (bounded-output-text 19 (Some (Claude None (Some 512) 64 RequestLimit)))))
+(OutputRead (req-read fragile-output-1 (Bytes (0 64)) ((Some 512) (Some 16) (Some 4) Estimated) (bounded-output-text-01234567890123456789012345678901234567890123 64 (Some (Claude None (Some 512) 64 RequestLimit)))))
 (OperationRejected (req-read ReadOutput FragileReferenceStale (Some (Output fragile-output-1))))

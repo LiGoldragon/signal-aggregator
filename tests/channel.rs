@@ -149,8 +149,8 @@ fn output_text_preview() -> OutputTextExcerpt {
 
 fn output_text_excerpt() -> OutputTextExcerpt {
     OutputTextExcerpt {
-        text: OutputText::new("bounded-output-text"),
-        byte_count: ByteCount::new(19),
+        text: OutputText::new("bounded-output-text-01234567890123456789012345678901234567890123"),
+        byte_count: ByteCount::new(64),
         truncation: Some(Truncation {
             source: SourceKind::Claude,
             path: None,
@@ -595,9 +595,17 @@ fn read_output_requires_explicit_bound_and_range() {
     assert!(matches!(request.range, OutputReadRange::Bytes(_)));
 
     let reply = output_read();
-    assert_eq!(reply.excerpt.text.as_str(), "bounded-output-text");
-    assert_eq!(reply.excerpt.byte_count.into_u64(), 19);
-    assert!(reply.excerpt.truncation.is_some());
+    assert_eq!(
+        reply.excerpt.text.as_str(),
+        "bounded-output-text-01234567890123456789012345678901234567890123"
+    );
+    assert_eq!(reply.excerpt.byte_count.into_u64(), 64);
+    let truncation = reply
+        .excerpt
+        .truncation
+        .as_ref()
+        .expect("bounded read records the request-limit truncation");
+    assert_eq!(truncation.projected_bytes, reply.excerpt.byte_count);
 }
 
 #[test]
