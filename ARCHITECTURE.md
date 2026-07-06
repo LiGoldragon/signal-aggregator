@@ -2,19 +2,28 @@
 
 `signal-aggregator` is the ordinary public wire contract for the `aggregator`
 component. It defines the peer-callable request/reply vocabulary for bounded
-collection of work evidence.
+collection of work evidence and metadata-first discovery of session, subagent,
+and output artifacts.
 
 ## Role
 
-The contract exposes two operations:
+The contract exposes the backward-compatible collection spine plus output-facing
+interfaces:
 
 - `Collect(EvidenceRequest)` returns `EvidenceCollected(EvidencePackage)` when
   the daemon has collected and normalized the requested evidence.
 - `Version(Version)` returns `VersionReported` so clients can identify the
   contract surface they are speaking.
+- `ListSessions`, `ListSubagents`, `ListOutputs`, and `ListOutputSegments`
+  return metadata cards with deterministic ordering, pagination metadata, opaque
+  fragile references, size metadata, provenance, and at most bounded previews.
+- `EstimateOutput` returns size metadata for a referenced output range.
+- `ReadOutput` is the explicit bounded text read path.
 
-Typed rejections are `EvidenceRejected` replies. They are caller-actionable
-contract outcomes, not daemon logs.
+Typed rejections are caller-actionable contract outcomes, not daemon logs.
+`EvidenceRejected` remains the collection rejection reply. Output-interface
+operations use `OperationRejected` with reasons for missing, stale, broken,
+oversized, unsupported, unauthorized, invalid, and invalid-range requests.
 
 ## Boundary
 
@@ -31,9 +40,20 @@ It has no review, summary, recommendation, score, or judgment field.
 ## Privacy and projection
 
 Transcript text can be private. The contract makes projection explicit through
-`Projection` and `SegmentProjection`. Metadata-only packages are first-class,
-and bounded text excerpts carry truncation facts. A caller that wants synthesis
-uses an agent to interpret the package after collection.
+`Projection`, `SegmentProjection`, `CardProjection`, and `OutputReadRange`.
+Metadata-only packages and metadata-first output lists are first-class. List
+cards can carry bounded previews, but full text content requires an explicit
+`ReadOutput` request with a byte bound. Bounded text excerpts carry truncation
+facts. A caller that wants synthesis uses an agent to interpret the package or
+output read after collection.
+
+The output references, segment references, session references, subagent
+references, and page cursors are named `Fragile*` because they are daemon-local
+opaque handles over transcript/artifact files that can change. Stale or broken
+references are normal `OperationRejected` outcomes.
+
+Agent-authored output appears only as artifact provenance and authored status;
+it is not a design-authority surface.
 
 ## Code map
 

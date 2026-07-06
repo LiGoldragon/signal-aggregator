@@ -3,12 +3,25 @@
 [
   (Collect [EvidenceRequest])
   (Version [Version])
+  (ListSessions [SessionListRequest])
+  (ListSubagents [SubagentListRequest])
+  (ListOutputs [OutputListRequest])
+  (ListOutputSegments [OutputSegmentListRequest])
+  (EstimateOutput [OutputEstimateRequest])
+  (ReadOutput [OutputReadRequest])
 ]
 
 [
   (EvidenceCollected [EvidencePackage])
   (VersionReported [VersionReport])
   (EvidenceRejected [EvidenceRejected])
+  (SessionsListed [SessionsListed])
+  (SubagentsListed [SubagentsListed])
+  (OutputsListed [OutputsListed])
+  (OutputSegmentsListed [OutputSegmentsListed])
+  (OutputEstimated [OutputEstimated])
+  (OutputRead [OutputRead])
+  (OperationRejected [OperationRejected])
 ]
 
 []
@@ -30,11 +43,70 @@
   BoundedText (ByteLimit)
   LimitPolicy (SegmentLimit ByteLimit)
   EvidencePackage (PackageIdentifier RequestIdentifier TimeWindow Timestamp [SourceVolume] [TranscriptSegment] [RepositoryChange] [Truncation] [ReadFailure])
+  SourceVolume (SourceKind SourceIdentifier ItemCount ByteCount ?Timestamp ?Timestamp)
+  LineRange (LineNumber LineNumber)
+  ByteRange (ByteCount ByteCount)
+  TranscriptTextExcerpt (TranscriptText ByteCount ?Truncation)
+  SegmentProjection [MetadataOnly IdentifiersOnly Text]
+  Text (TranscriptTextExcerpt)
+  TranscriptSegment (SourceKind SourceIdentifier TranscriptSegmentIdentifier FilesystemPath ?Timestamp ?LineRange ?ByteRange SegmentProjection)
+  RepositoryWorktreeState [Clean HasChanges NotObserved]
+  RepositoryChange (RepositoryIdentifier FilesystemPath ?CommitIdentifier ?Timestamp [RepositoryPath] RepositoryWorktreeState)
+  TruncationReason [RequestLimit SourceLimit ProjectionLimit]
+  Truncation (SourceKind ?FilesystemPath ?ByteCount ByteCount TruncationReason)
+  ReadFailureReason [Missing PermissionDenied Malformed UnsupportedFormat IoFailure]
+  ReadFailure (SourceKind ?FilesystemPath ?SourceIdentifier ReadFailureReason)
+  SizeMetadata (?ByteCount ?LineCount ?ItemCount SizeCertainty)
+  SizeCertainty [Exact Estimated Unknown]
+  ListingOrder [OldestFirst NewestFirst ReferenceAscending]
+  PageRequest (PageLimit ?FragilePageCursor ListingOrder)
+  PageMetadata (PageLimit ItemCount ?ItemCount ?FragilePageCursor ListingOrder)
+  CardProjection [MetadataOnly BoundedPreview]
+  BoundedPreview (BoundedTextProjection)
+  AuthoredStatus [AgentAuthored HumanAuthored MixedAuthorship UnknownAuthorship]
+  AuthoredStatusFilter [AnyAuthoredStatus OnlyAuthoredStatus]
+  OnlyAuthoredStatus (AuthoredStatus)
+  OutputProvenance (SourceKind SourceIdentifier AuthoredStatus ?Timestamp)
+  OutputTextExcerpt (OutputText ByteCount ?Truncation)
+  SessionCard (FragileSessionReference SourceKind SourceIdentifier ?Timestamp ?Timestamp ?ItemCount ?ItemCount SizeMetadata)
+  SubagentCard (FragileSubagentReference FragileSessionReference SubagentName AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
+  OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle OutputProvenance SizeMetadata ?OutputTextExcerpt)
+  OutputSegmentCard (FragileOutputSegmentReference FragileOutputReference SegmentIndex ?ByteRange ?LineRange SizeMetadata ?OutputTextExcerpt)
+  SessionListFilter (SourceSelection ?TimeWindow)
+  SubagentListFilter (FragileSessionReference AuthoredStatusFilter)
+  OutputListFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference AuthoredStatusFilter ?TimeWindow)
+  OutputSegmentListFilter (FragileOutputReference)
+  SessionListRequest (RequestIdentifier SessionListFilter PageRequest)
+  SubagentListRequest (RequestIdentifier SubagentListFilter PageRequest)
+  OutputListRequest (RequestIdentifier OutputListFilter PageRequest CardProjection)
+  OutputSegmentListRequest (RequestIdentifier OutputSegmentListFilter PageRequest CardProjection)
+  OutputReadRange [EntireOutput Bytes Lines Segment]
+  EntireOutput
+  Bytes (ByteRange)
+  Lines (LineRange)
+  Segment (FragileOutputSegmentReference)
+  OutputEstimateRequest (RequestIdentifier FragileOutputReference OutputReadRange)
+  OutputReadRequest (RequestIdentifier FragileOutputReference OutputReadRange ByteLimit)
+  SessionsListed (RequestIdentifier [SessionCard] PageMetadata)
+  SubagentsListed (RequestIdentifier [SubagentCard] PageMetadata)
+  OutputsListed (RequestIdentifier [OutputCard] PageMetadata)
+  OutputSegmentsListed (RequestIdentifier [OutputSegmentCard] PageMetadata)
+  OutputEstimated (RequestIdentifier FragileOutputReference OutputReadRange SizeMetadata)
+  OutputRead (RequestIdentifier FragileOutputReference OutputReadRange SizeMetadata OutputTextExcerpt)
+  OperationRejectionReason [Missing FragileReferenceStale FragileReferenceBroken Oversized Unsupported Unauthorized InvalidRequest InvalidRange]
+  RejectedFragileReference [Session Subagent Output OutputSegment PageCursor]
+  Session (FragileSessionReference)
+  Subagent (FragileSubagentReference)
+  Output (FragileOutputReference)
+  OutputSegment (FragileOutputSegmentReference)
+  PageCursor (FragilePageCursor)
+  OperationRejected (RequestIdentifier OperationKind OperationRejectionReason ?RejectedFragileReference)
   Version (?ContractName)
+  VersionReport (ContractName ContractVersion)
   EvidenceRejected (RequestIdentifier OperationKind RejectionReason)
 }
 
 [
-  (Version 0 1)
+  (Version 0 2)
   (Status Scaffold)
 ]
