@@ -9,6 +9,10 @@
   (ListOutputSegments [OutputSegmentListRequest])
   (EstimateOutput [OutputEstimateRequest])
   (ReadOutput [OutputReadRequest])
+  (ListTranscriptBlocks [TranscriptBlockListRequest])
+  (SearchTranscriptBlocks [TranscriptBlockSearchRequest])
+  (EstimateTranscriptBlock [TranscriptBlockEstimateRequest])
+  (ReadTranscriptBlock [TranscriptBlockReadRequest])
 ]
 
 [
@@ -22,6 +26,10 @@
   (OutputEstimated [OutputEstimated])
   (OutputRead [OutputRead])
   (OperationRejected [OperationRejected])
+  (TranscriptBlocksListed [TranscriptBlocksListed])
+  (TranscriptBlocksSearched [TranscriptBlocksSearched])
+  (TranscriptBlockEstimated [TranscriptBlockEstimated])
+  (TranscriptBlockRead [TranscriptBlockRead])
 ]
 
 []
@@ -72,14 +80,27 @@
   SubagentCard (FragileSubagentReference FragileSessionReference SubagentName AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
   OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle OutputProvenance SizeMetadata ?OutputTextExcerpt)
   OutputSegmentCard (FragileOutputSegmentReference FragileOutputReference SegmentIndex ?ByteRange ?LineRange SizeMetadata ?OutputTextExcerpt)
+  TranscriptBlockTextQuery (CanonicalNotaTextQuery)
+  TranscriptBlockSearchEvidence (CanonicalNotaTextQueryMatchEvidence)
+  TranscriptBlockKind [UserPrompt AgentResponse ToolCall ToolResult Inference SystemInstruction Attachment SessionEvent Unclassified]
+  SelectedTranscriptBlockKinds ([TranscriptBlockKind])
+  TranscriptBlockKindSelection [AllTranscriptBlockKinds OnlyTranscriptBlockKinds]
+  AllTranscriptBlockKinds
+  OnlyTranscriptBlockKinds (SelectedTranscriptBlockKinds)
+  TranscriptBlockTextAvailability [ReadableText UnavailableText EncryptedText]
+  TranscriptBlockProvenance (SourceKind SourceIdentifier AuthoredStatus ?Timestamp)
+  TranscriptBlockCard (FragileTranscriptBlockReference FragileSessionReference ?FragileSubagentReference TranscriptBlockKind TranscriptBlockIndex TranscriptBlockProvenance ?LineRange ?ByteRange SizeMetadata TranscriptBlockTextAvailability ?TranscriptTextExcerpt)
   SessionListFilter (SourceSelection ?TimeWindow)
   SubagentListFilter (FragileSessionReference AuthoredStatusFilter)
   OutputListFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference AuthoredStatusFilter ?TimeWindow)
   OutputSegmentListFilter (FragileOutputReference)
+  TranscriptBlockFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference TranscriptBlockKindSelection AuthoredStatusFilter ?TimeWindow)
   SessionListRequest (RequestIdentifier SessionListFilter PageRequest)
   SubagentListRequest (RequestIdentifier SubagentListFilter PageRequest)
   OutputListRequest (RequestIdentifier OutputListFilter PageRequest CardProjection)
   OutputSegmentListRequest (RequestIdentifier OutputSegmentListFilter PageRequest CardProjection)
+  TranscriptBlockListRequest (RequestIdentifier TranscriptBlockFilter PageRequest CardProjection)
+  TranscriptBlockSearchRequest (RequestIdentifier TranscriptBlockFilter TranscriptBlockTextQuery PageRequest CardProjection)
   OutputReadRange [EntireOutput Bytes Lines Segment]
   EntireOutput
   Bytes (ByteRange)
@@ -87,19 +108,27 @@
   Segment (FragileOutputSegmentReference)
   OutputEstimateRequest (RequestIdentifier FragileOutputReference OutputReadRange)
   OutputReadRequest (RequestIdentifier FragileOutputReference OutputReadRange ByteLimit)
+  TranscriptBlockEstimateRequest (RequestIdentifier FragileTranscriptBlockReference)
+  TranscriptBlockReadRequest (RequestIdentifier FragileTranscriptBlockReference ByteLimit)
   SessionsListed (RequestIdentifier [SessionCard] PageMetadata)
   SubagentsListed (RequestIdentifier [SubagentCard] PageMetadata)
   OutputsListed (RequestIdentifier [OutputCard] PageMetadata)
   OutputSegmentsListed (RequestIdentifier [OutputSegmentCard] PageMetadata)
   OutputEstimated (RequestIdentifier FragileOutputReference OutputReadRange SizeMetadata)
   OutputRead (RequestIdentifier FragileOutputReference OutputReadRange SizeMetadata OutputTextExcerpt)
-  OperationRejectionReason [Missing FragileReferenceStale FragileReferenceBroken Oversized Unsupported Unauthorized InvalidRequest InvalidRange]
-  RejectedFragileReference [Session Subagent Output OutputSegment PageCursor]
+  TranscriptBlocksListed (RequestIdentifier [TranscriptBlockCard] PageMetadata)
+  TranscriptBlockSearchMatch (TranscriptBlockCard TranscriptBlockSearchEvidence)
+  TranscriptBlocksSearched (RequestIdentifier [TranscriptBlockSearchMatch] PageMetadata)
+  TranscriptBlockEstimated (RequestIdentifier FragileTranscriptBlockReference SizeMetadata)
+  TranscriptBlockRead (RequestIdentifier FragileTranscriptBlockReference SizeMetadata TranscriptTextExcerpt)
+  OperationRejectionReason [Missing FragileReferenceStale FragileReferenceBroken Oversized Unsupported Unauthorized InvalidRequest InvalidRange InvalidQuery]
+  RejectedFragileReference [Session Subagent Output OutputSegment PageCursor TranscriptBlock]
   Session (FragileSessionReference)
   Subagent (FragileSubagentReference)
   Output (FragileOutputReference)
   OutputSegment (FragileOutputSegmentReference)
   PageCursor (FragilePageCursor)
+  TranscriptBlock (FragileTranscriptBlockReference)
   OperationRejected (RequestIdentifier OperationKind OperationRejectionReason ?RejectedFragileReference)
   Version (?ContractName)
   VersionReport (ContractName ContractVersion)
@@ -107,6 +136,6 @@
 }
 
 [
-  (Version 0 2)
+  (Version 0 3)
   (Status Scaffold)
 ]

@@ -17,8 +17,14 @@ interfaces:
 - `ListSessions`, `ListSubagents`, `ListOutputs`, and `ListOutputSegments`
   return metadata cards with deterministic ordering, pagination metadata, opaque
   fragile references, size metadata, provenance, and at most bounded previews.
+- `ListTranscriptBlocks` and `SearchTranscriptBlocks` expose whole logical
+  transcript blocks with `TranscriptBlock` vocabulary, kind selection, bounded
+  previews, and canonical `nota-text-query` query/evidence wrappers.
 - `EstimateOutput` returns size metadata for a referenced output range.
-- `ReadOutput` is the explicit bounded text read path.
+- `ReadOutput` is the explicit bounded output text read path.
+- `EstimateTranscriptBlock` and `ReadTranscriptBlock` are whole-block estimate
+  and bounded text read paths; callers do not compute byte ranges for block
+  reads.
 
 Typed rejections are caller-actionable contract outcomes, not daemon logs.
 `EvidenceRejected` remains the collection rejection reply. Output-interface
@@ -40,17 +46,18 @@ It has no review, summary, recommendation, score, or judgment field.
 ## Privacy and projection
 
 Transcript text can be private. The contract makes projection explicit through
-`Projection`, `SegmentProjection`, `CardProjection`, and `OutputReadRange`.
-Metadata-only packages and metadata-first output lists are first-class. List
-cards can carry bounded previews, but full text content requires an explicit
-`ReadOutput` request with a byte bound. Bounded text excerpts carry truncation
-facts. A caller that wants synthesis uses an agent to interpret the package or
-output read after collection.
+`Projection`, `SegmentProjection`, `CardProjection`, `OutputReadRange`, and
+whole-block `ReadTranscriptBlock` byte bounds. Metadata-only packages and
+metadata-first output and transcript-block lists are first-class. List cards can
+carry bounded previews, but full text content requires an explicit read request
+with a byte bound. Bounded text excerpts carry truncation facts. A caller that
+wants synthesis uses an agent to interpret the package, output read, or
+transcript block read after collection.
 
-The output references, segment references, session references, subagent
-references, and page cursors are named `Fragile*` because they are daemon-local
-opaque handles over transcript/artifact files that can change. Stale or broken
-references are normal `OperationRejected` outcomes.
+The output references, segment references, transcript block references, session
+references, subagent references, and page cursors are named `Fragile*` because
+they are daemon-local opaque handles over transcript/artifact files that can
+change. Stale or broken references are normal `OperationRejected` outcomes.
 
 Agent-authored output appears only as artifact provenance and authored status;
 it is not a design-authority surface.

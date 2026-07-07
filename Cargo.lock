@@ -159,6 +159,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nota-text-query"
+version = "0.1.0"
+source = "git+https://github.com/LiGoldragon/nota-text-query.git?branch=main#6140a3e9afe3f81c18a39cb0a11dec4eab68b561"
+dependencies = [
+ "nota 0.5.1 (git+https://github.com/LiGoldragon/nota-next.git?branch=main)",
+ "rkyv",
+ "thiserror",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -270,9 +280,10 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
 name = "signal-aggregator"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "nota 0.5.1 (git+https://github.com/LiGoldragon/nota-next.git?branch=main)",
+ "nota-text-query",
  "rkyv",
  "signal-frame",
  "thiserror",

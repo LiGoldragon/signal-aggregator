@@ -1,4 +1,8 @@
 use nota::{NotaDecode, NotaEncode, NotaSource};
+use nota_text_query::{
+    MatchEvidence, NearEvidence, Occurrence, Query, QueryTerm, WordDistance,
+    evidence::NearOccurrencePair,
+};
 use signal_aggregator::*;
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
@@ -92,6 +96,10 @@ fn output_reference() -> FragileOutputReference {
 
 fn output_segment_reference() -> FragileOutputSegmentReference {
     FragileOutputSegmentReference::new("fragile-segment-1")
+}
+
+fn transcript_block_reference() -> FragileTranscriptBlockReference {
+    FragileTranscriptBlockReference::new("fragile-block-1")
 }
 
 fn page_request() -> PageRequest {
@@ -217,6 +225,100 @@ fn output_segment_card() -> OutputSegmentCard {
     }
 }
 
+fn transcript_text_preview() -> TranscriptTextExcerpt {
+    TranscriptTextExcerpt {
+        text: TranscriptText::new("tool-result-preview"),
+        byte_count: ByteCount::new(19),
+        truncation: None,
+    }
+}
+
+fn transcript_text_excerpt() -> TranscriptTextExcerpt {
+    TranscriptTextExcerpt {
+        text: TranscriptText::new("tool-result-block-text-with-bounded-whole-block-read-semantics"),
+        byte_count: ByteCount::new(62),
+        truncation: Some(Truncation {
+            source: SourceKind::Claude,
+            path: None,
+            original_bytes: Some(ByteCount::new(128)),
+            projected_bytes: ByteCount::new(62),
+            reason: TruncationReason::RequestLimit,
+        }),
+    }
+}
+
+fn transcript_block_provenance() -> TranscriptBlockProvenance {
+    TranscriptBlockProvenance {
+        source: SourceKind::Claude,
+        source_identifier: SourceIdentifier::new("claude-transcript-1"),
+        authored_status: AuthoredStatus::AgentAuthored,
+        observed_at: Some(Timestamp::new("20260705T130005Z")),
+    }
+}
+
+fn transcript_block_card() -> TranscriptBlockCard {
+    TranscriptBlockCard {
+        reference: transcript_block_reference(),
+        session_reference: session_reference(),
+        subagent_reference: Some(subagent_reference()),
+        kind: TranscriptBlockKind::ToolResult,
+        block_index: TranscriptBlockIndex::new(7),
+        provenance: transcript_block_provenance(),
+        line_range: Some(LineRange {
+            start: LineNumber::new(12),
+            end: LineNumber::new(18),
+        }),
+        byte_range: Some(ByteRange {
+            start: ByteCount::new(320),
+            end: ByteCount::new(448),
+        }),
+        size: exact_size(),
+        text_availability: TranscriptBlockTextAvailability::ReadableText,
+        preview: Some(transcript_text_preview()),
+    }
+}
+
+fn transcript_block_filter() -> TranscriptBlockFilter {
+    TranscriptBlockFilter {
+        source_selection: SourceSelection::Only(SelectedSources {
+            sources: vec![SourceKind::Claude],
+        }),
+        session_reference: Some(session_reference()),
+        subagent_reference: Some(subagent_reference()),
+        kind_selection: TranscriptBlockKindSelection::OnlyTranscriptBlockKinds(
+            SelectedTranscriptBlockKinds {
+                kinds: vec![
+                    TranscriptBlockKind::ToolCall,
+                    TranscriptBlockKind::ToolResult,
+                ],
+            },
+        ),
+        authored_status: AuthoredStatusFilter::AnyAuthoredStatus,
+        time_window: Some(recent_window()),
+    }
+}
+
+fn transcript_block_text_query() -> TranscriptBlockTextQuery {
+    TranscriptBlockTextQuery::new(Query::near(
+        QueryTerm::word("tool"),
+        QueryTerm::word("result"),
+        WordDistance::new(4),
+    ))
+}
+
+fn transcript_block_search_evidence() -> TranscriptBlockSearchEvidence {
+    TranscriptBlockSearchEvidence::new(MatchEvidence::Near(NearEvidence::new(
+        QueryTerm::word("tool"),
+        QueryTerm::word("result"),
+        WordDistance::new(4),
+        vec![NearOccurrencePair::new(
+            Occurrence::new(0, 0),
+            Occurrence::new(1, 1),
+            WordDistance::new(0),
+        )],
+    )))
+}
+
 fn session_list_request() -> SessionListRequest {
     SessionListRequest {
         request_identifier: RequestIdentifier::new("req-sessions"),
@@ -293,6 +395,44 @@ fn output_read_request() -> OutputReadRequest {
     }
 }
 
+fn transcript_block_list_request() -> TranscriptBlockListRequest {
+    TranscriptBlockListRequest {
+        request_identifier: RequestIdentifier::new("req-blocks"),
+        filter: transcript_block_filter(),
+        page: page_request(),
+        projection: CardProjection::BoundedPreview(BoundedTextProjection {
+            maximum_bytes: ByteLimit::new(128),
+        }),
+    }
+}
+
+fn transcript_block_search_request() -> TranscriptBlockSearchRequest {
+    TranscriptBlockSearchRequest {
+        request_identifier: RequestIdentifier::new("req-block-search"),
+        filter: transcript_block_filter(),
+        query: transcript_block_text_query(),
+        page: page_request(),
+        projection: CardProjection::BoundedPreview(BoundedTextProjection {
+            maximum_bytes: ByteLimit::new(128),
+        }),
+    }
+}
+
+fn transcript_block_estimate_request() -> TranscriptBlockEstimateRequest {
+    TranscriptBlockEstimateRequest {
+        request_identifier: RequestIdentifier::new("req-block-estimate"),
+        block_reference: transcript_block_reference(),
+    }
+}
+
+fn transcript_block_read_request() -> TranscriptBlockReadRequest {
+    TranscriptBlockReadRequest {
+        request_identifier: RequestIdentifier::new("req-block-read"),
+        block_reference: transcript_block_reference(),
+        maximum_bytes: ByteLimit::new(62),
+    }
+}
+
 fn sessions_listed() -> SessionsListed {
     SessionsListed {
         request_identifier: RequestIdentifier::new("req-sessions"),
@@ -344,6 +484,42 @@ fn output_read() -> OutputRead {
     }
 }
 
+fn transcript_blocks_listed() -> TranscriptBlocksListed {
+    TranscriptBlocksListed {
+        request_identifier: RequestIdentifier::new("req-blocks"),
+        blocks: vec![transcript_block_card()],
+        page: page_metadata(),
+    }
+}
+
+fn transcript_blocks_searched() -> TranscriptBlocksSearched {
+    TranscriptBlocksSearched {
+        request_identifier: RequestIdentifier::new("req-block-search"),
+        matches: vec![TranscriptBlockSearchMatch {
+            card: transcript_block_card(),
+            evidence: transcript_block_search_evidence(),
+        }],
+        page: page_metadata(),
+    }
+}
+
+fn transcript_block_estimated() -> TranscriptBlockEstimated {
+    TranscriptBlockEstimated {
+        request_identifier: RequestIdentifier::new("req-block-estimate"),
+        block_reference: transcript_block_reference(),
+        size: estimated_size(),
+    }
+}
+
+fn transcript_block_read() -> TranscriptBlockRead {
+    TranscriptBlockRead {
+        request_identifier: RequestIdentifier::new("req-block-read"),
+        block_reference: transcript_block_reference(),
+        size: estimated_size(),
+        excerpt: transcript_text_excerpt(),
+    }
+}
+
 fn output_interface_requests() -> Vec<AggregatorRequest> {
     vec![
         AggregatorRequest::ListSessions(session_list_request()),
@@ -363,6 +539,24 @@ fn output_interface_replies() -> Vec<AggregatorReply> {
         AggregatorReply::OutputSegmentsListed(output_segments_listed()),
         AggregatorReply::OutputEstimated(output_estimated()),
         AggregatorReply::OutputRead(output_read()),
+    ]
+}
+
+fn transcript_block_interface_requests() -> Vec<AggregatorRequest> {
+    vec![
+        AggregatorRequest::ListTranscriptBlocks(transcript_block_list_request()),
+        AggregatorRequest::SearchTranscriptBlocks(transcript_block_search_request()),
+        AggregatorRequest::EstimateTranscriptBlock(transcript_block_estimate_request()),
+        AggregatorRequest::ReadTranscriptBlock(transcript_block_read_request()),
+    ]
+}
+
+fn transcript_block_interface_replies() -> Vec<AggregatorReply> {
+    vec![
+        AggregatorReply::TranscriptBlocksListed(transcript_blocks_listed()),
+        AggregatorReply::TranscriptBlocksSearched(transcript_blocks_searched()),
+        AggregatorReply::TranscriptBlockEstimated(transcript_block_estimated()),
+        AggregatorReply::TranscriptBlockRead(transcript_block_read()),
     ]
 }
 
@@ -432,6 +626,11 @@ fn canonical_examples() -> Vec<CanonicalExample> {
             .into_iter()
             .map(CanonicalExample::Request),
     );
+    examples.extend(
+        transcript_block_interface_requests()
+            .into_iter()
+            .map(CanonicalExample::Request),
+    );
     examples.extend([
         CanonicalExample::Reply(AggregatorReply::EvidenceCollected(EvidencePackage {
             package_identifier: PackageIdentifier::new("pkg-20260705"),
@@ -449,7 +648,7 @@ fn canonical_examples() -> Vec<CanonicalExample> {
         })),
         CanonicalExample::Reply(AggregatorReply::VersionReported(VersionReport {
             contract_name: ContractName::new("signal-aggregator"),
-            contract_version: ContractVersion::new("0.2.0"),
+            contract_version: ContractVersion::new("0.3.0"),
         })),
         CanonicalExample::Reply(AggregatorReply::EvidenceRejected(EvidenceRejected {
             request_identifier: RequestIdentifier::new("req-20260705"),
@@ -468,6 +667,19 @@ fn canonical_examples() -> Vec<CanonicalExample> {
             operation: AggregatorOperationKind::ReadOutput,
             reason: OperationRejectionReason::FragileReferenceStale,
             reference: Some(RejectedFragileReference::Output(output_reference())),
+        },
+    )));
+    examples.extend(
+        transcript_block_interface_replies()
+            .into_iter()
+            .map(CanonicalExample::Reply),
+    );
+    examples.push(CanonicalExample::Reply(AggregatorReply::OperationRejected(
+        OperationRejected {
+            request_identifier: RequestIdentifier::new("req-block-search"),
+            operation: AggregatorOperationKind::SearchTranscriptBlocks,
+            reason: OperationRejectionReason::InvalidQuery,
+            reference: None,
         },
     )));
     examples
@@ -520,6 +732,20 @@ fn output_interface_replies_round_trip_through_frame() {
 }
 
 #[test]
+fn transcript_block_interface_requests_round_trip_through_frame() {
+    for request in transcript_block_interface_requests() {
+        assert_eq!(round_trip_request(request.clone()), request);
+    }
+}
+
+#[test]
+fn transcript_block_interface_replies_round_trip_through_frame() {
+    for reply in transcript_block_interface_replies() {
+        assert_eq!(round_trip_reply(reply.clone()), reply);
+    }
+}
+
+#[test]
 fn fragile_reference_rejections_round_trip_through_frame() {
     let stale_reply = AggregatorReply::OperationRejected(OperationRejected {
         request_identifier: RequestIdentifier::new("req-read"),
@@ -544,7 +770,7 @@ fn version_request_and_reply_round_trip_through_nota() {
     round_trip_nota(AggregatorRequest::Version(Version { client_name: None }));
     round_trip_nota(AggregatorReply::VersionReported(VersionReport {
         contract_name: ContractName::new("signal-aggregator"),
-        contract_version: ContractVersion::new("0.2.0"),
+        contract_version: ContractVersion::new("0.3.0"),
     }));
 }
 
@@ -566,6 +792,24 @@ fn output_interface_requests_and_replies_round_trip_through_nota() {
         operation: AggregatorOperationKind::ReadOutput,
         reason: OperationRejectionReason::InvalidRange,
         reference: Some(RejectedFragileReference::Output(output_reference())),
+    }));
+}
+
+#[test]
+fn transcript_block_requests_and_replies_round_trip_through_nota() {
+    for request in transcript_block_interface_requests() {
+        round_trip_nota(request);
+    }
+    for reply in transcript_block_interface_replies() {
+        round_trip_nota(reply);
+    }
+    round_trip_nota(AggregatorReply::OperationRejected(OperationRejected {
+        request_identifier: RequestIdentifier::new("req-block-read"),
+        operation: AggregatorOperationKind::ReadTranscriptBlock,
+        reason: OperationRejectionReason::FragileReferenceBroken,
+        reference: Some(RejectedFragileReference::TranscriptBlock(
+            transcript_block_reference(),
+        )),
     }));
 }
 
@@ -609,6 +853,68 @@ fn read_output_requires_explicit_bound_and_range() {
 }
 
 #[test]
+fn transcript_block_search_uses_canonical_query_and_evidence() {
+    let request = transcript_block_search_request();
+    assert_eq!(
+        request.query.as_query(),
+        &Query::near(
+            QueryTerm::word("tool"),
+            QueryTerm::word("result"),
+            WordDistance::new(4),
+        )
+    );
+
+    let reply = transcript_blocks_searched();
+    let evidence = reply.matches[0].evidence.as_evidence();
+    assert!(matches!(evidence, MatchEvidence::Near(_)));
+}
+
+#[test]
+fn transcript_block_cards_preserve_source_kind_without_final_response_inference() {
+    let card = transcript_block_card();
+    assert_eq!(card.kind, TranscriptBlockKind::ToolResult);
+    assert_eq!(card.block_index.into_u64(), 7);
+    assert_eq!(
+        card.text_availability,
+        TranscriptBlockTextAvailability::ReadableText
+    );
+    assert!(!card.to_nota().contains("FinalResponse"));
+
+    let TranscriptBlockKindSelection::OnlyTranscriptBlockKinds(selection) =
+        transcript_block_filter().kind_selection
+    else {
+        panic!("expected explicit block-kind selection");
+    };
+    assert_eq!(
+        selection.kinds,
+        vec![
+            TranscriptBlockKind::ToolCall,
+            TranscriptBlockKind::ToolResult
+        ]
+    );
+}
+
+#[test]
+fn read_transcript_block_requires_only_whole_block_reference_and_bound() {
+    let request = transcript_block_read_request();
+    assert_eq!(request.maximum_bytes.into_u64(), 62);
+    assert_eq!(request.block_reference, transcript_block_reference());
+
+    let reply = transcript_block_read();
+    assert_eq!(reply.block_reference, transcript_block_reference());
+    assert_eq!(reply.excerpt.byte_count.into_u64(), 62);
+    assert_eq!(
+        reply
+            .excerpt
+            .truncation
+            .as_ref()
+            .expect("whole-block read can be bounded and truncated")
+            .reason,
+        TruncationReason::RequestLimit
+    );
+}
+
+#[test]
 fn canonical_examples_match_file_order_and_boundaries() {
     let expected_examples = canonical_examples();
     let actual_lines = canonical_example_lines();
@@ -635,6 +941,10 @@ fn operation_heads_are_contract_local() {
             "ListOutputSegments",
             "EstimateOutput",
             "ReadOutput",
+            "ListTranscriptBlocks",
+            "SearchTranscriptBlocks",
+            "EstimateTranscriptBlock",
+            "ReadTranscriptBlock",
         ]
     );
     assert_eq!(
@@ -644,6 +954,11 @@ fn operation_heads_are_contract_local() {
     assert_eq!(
         AggregatorRequest::ReadOutput(output_read_request()).operation_kind(),
         AggregatorOperationKind::ReadOutput
+    );
+    assert_eq!(
+        AggregatorRequest::SearchTranscriptBlocks(transcript_block_search_request())
+            .operation_kind(),
+        AggregatorOperationKind::SearchTranscriptBlocks
     );
 }
 
@@ -658,6 +973,10 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   (ListOutputSegments [OutputSegmentListRequest])
   (EstimateOutput [OutputEstimateRequest])
   (ReadOutput [OutputReadRequest])
+  (ListTranscriptBlocks [TranscriptBlockListRequest])
+  (SearchTranscriptBlocks [TranscriptBlockSearchRequest])
+  (EstimateTranscriptBlock [TranscriptBlockEstimateRequest])
+  (ReadTranscriptBlock [TranscriptBlockReadRequest])
 ]
 
 [
@@ -671,6 +990,10 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   (OutputEstimated [OutputEstimated])
   (OutputRead [OutputRead])
   (OperationRejected [OperationRejected])
+  (TranscriptBlocksListed [TranscriptBlocksListed])
+  (TranscriptBlocksSearched [TranscriptBlocksSearched])
+  (TranscriptBlockEstimated [TranscriptBlockEstimated])
+  (TranscriptBlockRead [TranscriptBlockRead])
 ]
 
 []
@@ -721,14 +1044,27 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   SubagentCard (FragileSubagentReference FragileSessionReference SubagentName AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
   OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle OutputProvenance SizeMetadata ?OutputTextExcerpt)
   OutputSegmentCard (FragileOutputSegmentReference FragileOutputReference SegmentIndex ?ByteRange ?LineRange SizeMetadata ?OutputTextExcerpt)
+  TranscriptBlockTextQuery (CanonicalNotaTextQuery)
+  TranscriptBlockSearchEvidence (CanonicalNotaTextQueryMatchEvidence)
+  TranscriptBlockKind [UserPrompt AgentResponse ToolCall ToolResult Inference SystemInstruction Attachment SessionEvent Unclassified]
+  SelectedTranscriptBlockKinds ([TranscriptBlockKind])
+  TranscriptBlockKindSelection [AllTranscriptBlockKinds OnlyTranscriptBlockKinds]
+  AllTranscriptBlockKinds
+  OnlyTranscriptBlockKinds (SelectedTranscriptBlockKinds)
+  TranscriptBlockTextAvailability [ReadableText UnavailableText EncryptedText]
+  TranscriptBlockProvenance (SourceKind SourceIdentifier AuthoredStatus ?Timestamp)
+  TranscriptBlockCard (FragileTranscriptBlockReference FragileSessionReference ?FragileSubagentReference TranscriptBlockKind TranscriptBlockIndex TranscriptBlockProvenance ?LineRange ?ByteRange SizeMetadata TranscriptBlockTextAvailability ?TranscriptTextExcerpt)
   SessionListFilter (SourceSelection ?TimeWindow)
   SubagentListFilter (FragileSessionReference AuthoredStatusFilter)
   OutputListFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference AuthoredStatusFilter ?TimeWindow)
   OutputSegmentListFilter (FragileOutputReference)
+  TranscriptBlockFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference TranscriptBlockKindSelection AuthoredStatusFilter ?TimeWindow)
   SessionListRequest (RequestIdentifier SessionListFilter PageRequest)
   SubagentListRequest (RequestIdentifier SubagentListFilter PageRequest)
   OutputListRequest (RequestIdentifier OutputListFilter PageRequest CardProjection)
   OutputSegmentListRequest (RequestIdentifier OutputSegmentListFilter PageRequest CardProjection)
+  TranscriptBlockListRequest (RequestIdentifier TranscriptBlockFilter PageRequest CardProjection)
+  TranscriptBlockSearchRequest (RequestIdentifier TranscriptBlockFilter TranscriptBlockTextQuery PageRequest CardProjection)
   OutputReadRange [EntireOutput Bytes Lines Segment]
   EntireOutput
   Bytes (ByteRange)
@@ -736,19 +1072,27 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   Segment (FragileOutputSegmentReference)
   OutputEstimateRequest (RequestIdentifier FragileOutputReference OutputReadRange)
   OutputReadRequest (RequestIdentifier FragileOutputReference OutputReadRange ByteLimit)
+  TranscriptBlockEstimateRequest (RequestIdentifier FragileTranscriptBlockReference)
+  TranscriptBlockReadRequest (RequestIdentifier FragileTranscriptBlockReference ByteLimit)
   SessionsListed (RequestIdentifier [SessionCard] PageMetadata)
   SubagentsListed (RequestIdentifier [SubagentCard] PageMetadata)
   OutputsListed (RequestIdentifier [OutputCard] PageMetadata)
   OutputSegmentsListed (RequestIdentifier [OutputSegmentCard] PageMetadata)
   OutputEstimated (RequestIdentifier FragileOutputReference OutputReadRange SizeMetadata)
   OutputRead (RequestIdentifier FragileOutputReference OutputReadRange SizeMetadata OutputTextExcerpt)
-  OperationRejectionReason [Missing FragileReferenceStale FragileReferenceBroken Oversized Unsupported Unauthorized InvalidRequest InvalidRange]
-  RejectedFragileReference [Session Subagent Output OutputSegment PageCursor]
+  TranscriptBlocksListed (RequestIdentifier [TranscriptBlockCard] PageMetadata)
+  TranscriptBlockSearchMatch (TranscriptBlockCard TranscriptBlockSearchEvidence)
+  TranscriptBlocksSearched (RequestIdentifier [TranscriptBlockSearchMatch] PageMetadata)
+  TranscriptBlockEstimated (RequestIdentifier FragileTranscriptBlockReference SizeMetadata)
+  TranscriptBlockRead (RequestIdentifier FragileTranscriptBlockReference SizeMetadata TranscriptTextExcerpt)
+  OperationRejectionReason [Missing FragileReferenceStale FragileReferenceBroken Oversized Unsupported Unauthorized InvalidRequest InvalidRange InvalidQuery]
+  RejectedFragileReference [Session Subagent Output OutputSegment PageCursor TranscriptBlock]
   Session (FragileSessionReference)
   Subagent (FragileSubagentReference)
   Output (FragileOutputReference)
   OutputSegment (FragileOutputSegmentReference)
   PageCursor (FragilePageCursor)
+  TranscriptBlock (FragileTranscriptBlockReference)
   OperationRejected (RequestIdentifier OperationKind OperationRejectionReason ?RejectedFragileReference)
   Version (?ContractName)
   VersionReport (ContractName ContractVersion)
@@ -756,7 +1100,7 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
 }
 
 [
-  (Version 0 2)
+  (Version 0 3)
   (Status Scaffold)
 ]
 "#;
@@ -811,6 +1155,10 @@ fn schema_sketch_matches_complete_manual_contract_witness() {
             "ListOutputSegments",
             "EstimateOutput",
             "ReadOutput",
+            "ListTranscriptBlocks",
+            "SearchTranscriptBlocks",
+            "EstimateTranscriptBlock",
+            "ReadTranscriptBlock",
         ],
         expected_reply_heads: &[
             "EvidenceCollected",
@@ -823,6 +1171,10 @@ fn schema_sketch_matches_complete_manual_contract_witness() {
             "OutputEstimated",
             "OutputRead",
             "OperationRejected",
+            "TranscriptBlocksListed",
+            "TranscriptBlocksSearched",
+            "TranscriptBlockEstimated",
+            "TranscriptBlockRead",
         ],
         expected_data_heads: &[
             "EvidenceRequest",
@@ -833,6 +1185,18 @@ fn schema_sketch_matches_complete_manual_contract_witness() {
             "OutputSegmentListRequest",
             "OutputEstimateRequest",
             "OutputReadRequest",
+            "TranscriptBlockListRequest",
+            "TranscriptBlockSearchRequest",
+            "TranscriptBlockEstimateRequest",
+            "TranscriptBlockReadRequest",
+            "TranscriptBlockCard",
+            "TranscriptBlockKind",
+            "TranscriptBlockTextQuery",
+            "TranscriptBlockSearchEvidence",
+            "TranscriptBlocksListed",
+            "TranscriptBlocksSearched",
+            "TranscriptBlockEstimated",
+            "TranscriptBlockRead",
             "SessionsListed",
             "SubagentsListed",
             "OutputsListed",

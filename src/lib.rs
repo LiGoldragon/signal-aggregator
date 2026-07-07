@@ -1,12 +1,14 @@
 //! Ordinary Signal contract for aggregator.
 //!
 //! This crate carries bounded collection requests, normalized evidence
-//! packages, and fine-controlled metadata-first output discovery. Synthesis and
-//! review happen in agents after the package or bounded output text is read.
+//! packages, fine-controlled metadata-first output discovery, and structured
+//! transcript block search/read requests. Synthesis and review happen in agents
+//! after the package, bounded output text, or bounded transcript block text is read.
 //! Agent-authored output is exposed as artifact provenance, not as design
 //! authority.
 
 use nota::{NotaDecode, NotaEncode};
+pub use nota_text_query::{MatchEvidence as TextMatchEvidence, Query as TextQuery};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_frame::signal_channel;
 
@@ -107,6 +109,11 @@ string_newtype!(
     FragileOutputSegmentReference
 );
 string_newtype!(
+    /// Opaque daemon-local transcript block handle. The daemon may reject it as
+    /// stale or broken when the underlying transcript files change.
+    FragileTranscriptBlockReference
+);
+string_newtype!(
     /// Opaque daemon-local pagination handle. The daemon may reject it as stale
     /// when the listed collection changes.
     FragilePageCursor
@@ -121,6 +128,7 @@ count_newtype!(LineNumber, u64, into_u64);
 count_newtype!(LineCount, u64, into_u64);
 count_newtype!(PageLimit, u64, into_u64);
 count_newtype!(SegmentIndex, u64, into_u64);
+count_newtype!(TranscriptBlockIndex, u64, into_u64);
 
 #[derive(
     Archive,
@@ -594,6 +602,130 @@ pub struct OutputSegmentCard {
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
+pub struct TranscriptBlockTextQuery(TextQuery);
+
+impl TranscriptBlockTextQuery {
+    pub fn new(query: TextQuery) -> Self {
+        Self(query)
+    }
+
+    pub fn as_query(&self) -> &TextQuery {
+        &self.0
+    }
+
+    pub fn into_query(self) -> TextQuery {
+        self.0
+    }
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockSearchEvidence(TextMatchEvidence);
+
+impl TranscriptBlockSearchEvidence {
+    pub fn new(evidence: TextMatchEvidence) -> Self {
+        Self(evidence)
+    }
+
+    pub fn as_evidence(&self) -> &TextMatchEvidence {
+        &self.0
+    }
+
+    pub fn into_evidence(self) -> TextMatchEvidence {
+        self.0
+    }
+}
+
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum TranscriptBlockKind {
+    UserPrompt,
+    AgentResponse,
+    ToolCall,
+    ToolResult,
+    Inference,
+    SystemInstruction,
+    Attachment,
+    SessionEvent,
+    Unclassified,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SelectedTranscriptBlockKinds {
+    pub kinds: Vec<TranscriptBlockKind>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub enum TranscriptBlockKindSelection {
+    AllTranscriptBlockKinds,
+    OnlyTranscriptBlockKinds(SelectedTranscriptBlockKinds),
+}
+
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum TranscriptBlockTextAvailability {
+    ReadableText,
+    UnavailableText,
+    EncryptedText,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockProvenance {
+    pub source: SourceKind,
+    pub source_identifier: SourceIdentifier,
+    pub authored_status: AuthoredStatus,
+    pub observed_at: Option<Timestamp>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockCard {
+    pub reference: FragileTranscriptBlockReference,
+    pub session_reference: FragileSessionReference,
+    pub subagent_reference: Option<FragileSubagentReference>,
+    pub kind: TranscriptBlockKind,
+    pub block_index: TranscriptBlockIndex,
+    pub provenance: TranscriptBlockProvenance,
+    pub line_range: Option<LineRange>,
+    pub byte_range: Option<ByteRange>,
+    pub size: SizeMetadata,
+    pub text_availability: TranscriptBlockTextAvailability,
+    pub preview: Option<TranscriptTextExcerpt>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct SessionListFilter {
     pub source_selection: SourceSelection,
     pub time_window: Option<TimeWindow>,
@@ -623,6 +755,18 @@ pub struct OutputListFilter {
 )]
 pub struct OutputSegmentListFilter {
     pub output_reference: FragileOutputReference,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockFilter {
+    pub source_selection: SourceSelection,
+    pub session_reference: Option<FragileSessionReference>,
+    pub subagent_reference: Option<FragileSubagentReference>,
+    pub kind_selection: TranscriptBlockKindSelection,
+    pub authored_status: AuthoredStatusFilter,
+    pub time_window: Option<TimeWindow>,
 }
 
 #[derive(
@@ -666,6 +810,27 @@ pub struct OutputSegmentListRequest {
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
+pub struct TranscriptBlockListRequest {
+    pub request_identifier: RequestIdentifier,
+    pub filter: TranscriptBlockFilter,
+    pub page: PageRequest,
+    pub projection: CardProjection,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockSearchRequest {
+    pub request_identifier: RequestIdentifier,
+    pub filter: TranscriptBlockFilter,
+    pub query: TranscriptBlockTextQuery,
+    pub page: PageRequest,
+    pub projection: CardProjection,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub enum OutputReadRange {
     EntireOutput,
     Bytes(ByteRange),
@@ -689,6 +854,23 @@ pub struct OutputReadRequest {
     pub request_identifier: RequestIdentifier,
     pub output_reference: FragileOutputReference,
     pub range: OutputReadRange,
+    pub maximum_bytes: ByteLimit,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockEstimateRequest {
+    pub request_identifier: RequestIdentifier,
+    pub block_reference: FragileTranscriptBlockReference,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockReadRequest {
+    pub request_identifier: RequestIdentifier,
+    pub block_reference: FragileTranscriptBlockReference,
     pub maximum_bytes: ByteLimit,
 }
 
@@ -750,6 +932,51 @@ pub struct OutputRead {
 }
 
 #[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlocksListed {
+    pub request_identifier: RequestIdentifier,
+    pub blocks: Vec<TranscriptBlockCard>,
+    pub page: PageMetadata,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockSearchMatch {
+    pub card: TranscriptBlockCard,
+    pub evidence: TranscriptBlockSearchEvidence,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlocksSearched {
+    pub request_identifier: RequestIdentifier,
+    pub matches: Vec<TranscriptBlockSearchMatch>,
+    pub page: PageMetadata,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockEstimated {
+    pub request_identifier: RequestIdentifier,
+    pub block_reference: FragileTranscriptBlockReference,
+    pub size: SizeMetadata,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TranscriptBlockRead {
+    pub request_identifier: RequestIdentifier,
+    pub block_reference: FragileTranscriptBlockReference,
+    pub size: SizeMetadata,
+    pub excerpt: TranscriptTextExcerpt,
+}
+
+#[derive(
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
@@ -771,6 +998,7 @@ pub enum OperationRejectionReason {
     Unauthorized,
     InvalidRequest,
     InvalidRange,
+    InvalidQuery,
 }
 
 #[derive(
@@ -782,6 +1010,7 @@ pub enum RejectedFragileReference {
     Output(FragileOutputReference),
     OutputSegment(FragileOutputSegmentReference),
     PageCursor(FragilePageCursor),
+    TranscriptBlock(FragileTranscriptBlockReference),
 }
 
 #[derive(
@@ -849,6 +1078,10 @@ signal_channel! {
         operation ListOutputSegments(OutputSegmentListRequest),
         operation EstimateOutput(OutputEstimateRequest),
         operation ReadOutput(OutputReadRequest),
+        operation ListTranscriptBlocks(TranscriptBlockListRequest),
+        operation SearchTranscriptBlocks(TranscriptBlockSearchRequest),
+        operation EstimateTranscriptBlock(TranscriptBlockEstimateRequest),
+        operation ReadTranscriptBlock(TranscriptBlockReadRequest),
     }
     reply AggregatorReply {
         EvidenceCollected(EvidencePackage),
@@ -861,6 +1094,10 @@ signal_channel! {
         OutputEstimated(OutputEstimated),
         OutputRead(OutputRead),
         OperationRejected(OperationRejected),
+        TranscriptBlocksListed(TranscriptBlocksListed),
+        TranscriptBlocksSearched(TranscriptBlocksSearched),
+        TranscriptBlockEstimated(TranscriptBlockEstimated),
+        TranscriptBlockRead(TranscriptBlockRead),
     }
 }
 
