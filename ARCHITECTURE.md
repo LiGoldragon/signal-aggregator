@@ -14,6 +14,8 @@ interfaces:
   the daemon has collected and normalized the requested evidence.
 - `Version(Version)` returns `VersionReported` so clients can identify the
   contract surface they are speaking.
+- `ObserveHealth(RuntimeHealthRequest)` returns `RuntimeHealthObserved` with
+  runtime capabilities, source health cards, and fragile-index health.
 - `ListSessions`, `ListSubagents`, `ListOutputs`, and `ListOutputSegments`
   return metadata cards with deterministic ordering, pagination metadata, opaque
   fragile references, size metadata, provenance, and at most bounded previews.
@@ -48,9 +50,9 @@ It has no review, summary, recommendation, score, or judgment field.
 Transcript text can be private. The contract makes projection explicit through
 `Projection`, `SegmentProjection`, `CardProjection`, `OutputReadRange`, and
 whole-block `ReadTranscriptBlock` byte bounds. Metadata-only packages and
-metadata-first output and transcript-block lists are first-class. List cards can
-carry bounded previews, but full text content requires an explicit read request
-with a byte bound. Bounded text excerpts carry truncation facts. A caller that
+metadata-first output and transcript-block lists are first-class. List and health cards can carry typed locators, source status, and bounded
+previews, but full text content requires an explicit read request with a byte
+bound. Bounded text excerpts carry truncation facts. A caller that
 wants synthesis uses an agent to interpret the package, output read, or
 transcript block read after collection.
 
