@@ -3,6 +3,7 @@
 [
   (Collect [EvidenceRequest])
   (Version [Version])
+  (ObserveHealth [RuntimeHealthRequest])
   (ListSessions [SessionListRequest])
   (ListSubagents [SubagentListRequest])
   (ListOutputs [OutputListRequest])
@@ -18,6 +19,7 @@
 [
   (EvidenceCollected [EvidencePackage])
   (VersionReported [VersionReport])
+  (RuntimeHealthObserved [RuntimeHealthObserved])
   (EvidenceRejected [EvidenceRejected])
   (SessionsListed [SessionsListed])
   (SubagentsListed [SubagentsListed])
@@ -46,7 +48,7 @@
   SourceSelection [AllConfigured Only]
   AllConfigured
   Only ([SourceKind])
-  SourceKind [Claude Codex Pi Repository]
+  SourceKind [Claude ClaudeSubagentOutput Codex Pi Repository]
   Projection [MetadataOnly IdentifiersOnly BoundedText]
   BoundedText (ByteLimit)
   LimitPolicy (SegmentLimit ByteLimit)
@@ -76,9 +78,12 @@
   OnlyAuthoredStatus (AuthoredStatus)
   OutputProvenance (SourceKind SourceIdentifier AuthoredStatus ?Timestamp)
   OutputTextExcerpt (OutputText ByteCount ?Truncation)
-  SessionCard (FragileSessionReference SourceKind SourceIdentifier ?Timestamp ?Timestamp ?ItemCount ?ItemCount SizeMetadata)
-  SubagentCard (FragileSubagentReference FragileSessionReference SubagentName AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
-  OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle OutputProvenance SizeMetadata ?OutputTextExcerpt)
+  SourceLocator (FilesystemPath ?RootRelativePath)
+  SourceHealthStatus [ReadableEmpty ReadableIndexed UnreadableRoot DiscoveryTruncated MalformedRecords IndexStoreUnreadable]
+  SubagentTaskMetadata (TaskIdentifier ?TaskTitle ?ToolUseIdentifier ?SourceLocator SourceHealthStatus ?TaskResult ?UsageSummary ?RelativeDuration)
+  SessionCard (FragileSessionReference SourceKind SourceIdentifier ?SessionIdentifier ?SourceLocator ?Timestamp ?Timestamp ?ItemCount ?ItemCount SizeMetadata)
+  SubagentCard (FragileSubagentReference FragileSessionReference SubagentName ?SubagentTaskMetadata AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
+  OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle ?SubagentTaskMetadata OutputProvenance SizeMetadata ?OutputTextExcerpt)
   OutputSegmentCard (FragileOutputSegmentReference FragileOutputReference SegmentIndex ?ByteRange ?LineRange SizeMetadata ?OutputTextExcerpt)
   TranscriptBlockTextQuery (CanonicalNotaTextQuery)
   TranscriptBlockSearchEvidence (CanonicalNotaTextQueryMatchEvidence)
@@ -89,12 +94,12 @@
   OnlyTranscriptBlockKinds (SelectedTranscriptBlockKinds)
   TranscriptBlockTextAvailability [ReadableText UnavailableText EncryptedText]
   TranscriptBlockProvenance (SourceKind SourceIdentifier AuthoredStatus ?Timestamp)
-  TranscriptBlockCard (FragileTranscriptBlockReference FragileSessionReference ?FragileSubagentReference TranscriptBlockKind TranscriptBlockIndex TranscriptBlockProvenance ?LineRange ?ByteRange SizeMetadata TranscriptBlockTextAvailability ?TranscriptTextExcerpt)
+  TranscriptBlockCard (FragileTranscriptBlockReference FragileSessionReference ?FragileSubagentReference ?SubagentTaskMetadata TranscriptBlockKind TranscriptBlockIndex TranscriptBlockProvenance ?LineRange ?ByteRange SizeMetadata TranscriptBlockTextAvailability ?TranscriptTextExcerpt)
   SessionListFilter (SourceSelection ?TimeWindow)
-  SubagentListFilter (FragileSessionReference AuthoredStatusFilter)
-  OutputListFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference AuthoredStatusFilter ?TimeWindow)
+  SubagentListFilter (FragileSessionReference AuthoredStatusFilter ?TaskIdentifier)
+  OutputListFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference ?TaskIdentifier AuthoredStatusFilter ?TimeWindow)
   OutputSegmentListFilter (FragileOutputReference)
-  TranscriptBlockFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference TranscriptBlockKindSelection AuthoredStatusFilter ?TimeWindow)
+  TranscriptBlockFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference ?TaskIdentifier TranscriptBlockKindSelection AuthoredStatusFilter ?TimeWindow)
   SessionListRequest (RequestIdentifier SessionListFilter PageRequest)
   SubagentListRequest (RequestIdentifier SubagentListFilter PageRequest)
   OutputListRequest (RequestIdentifier OutputListFilter PageRequest CardProjection)
@@ -110,6 +115,12 @@
   OutputReadRequest (RequestIdentifier FragileOutputReference OutputReadRange ByteLimit)
   TranscriptBlockEstimateRequest (RequestIdentifier FragileTranscriptBlockReference)
   TranscriptBlockReadRequest (RequestIdentifier FragileTranscriptBlockReference ByteLimit)
+  RuntimeHealthRequest (RequestIdentifier)
+  RuntimeCapabilityStatus [Supported Unsupported]
+  RuntimeCapabilities (RuntimeCapabilityStatus RuntimeCapabilityStatus RuntimeCapabilityStatus)
+  SourceHealthCard (SourceKind SourceIdentifier SourceLocator SourceHealthStatus ItemCount ItemCount ItemCount ItemCount)
+  IndexHealth (SourceHealthStatus ItemCount ItemCount ItemCount ItemCount)
+  RuntimeHealthObserved (RequestIdentifier RuntimeCapabilities [SourceHealthCard] IndexHealth)
   SessionsListed (RequestIdentifier [SessionCard] PageMetadata)
   SubagentsListed (RequestIdentifier [SubagentCard] PageMetadata)
   OutputsListed (RequestIdentifier [OutputCard] PageMetadata)

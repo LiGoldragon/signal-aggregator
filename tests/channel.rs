@@ -169,11 +169,35 @@ fn output_text_excerpt() -> OutputTextExcerpt {
     }
 }
 
+fn task_metadata() -> SubagentTaskMetadata {
+    SubagentTaskMetadata {
+        task_identifier: TaskIdentifier::new("task-1"),
+        title: Some(TaskTitle::new("RecoverAggregator")),
+        tool_use_identifier: Some(ToolUseIdentifier::new("toolu-1")),
+        output_locator: Some(SourceLocator {
+            root: FilesystemPath::new("/tmp/claude-subagents"),
+            relative_path: Some(RootRelativePath::new("task-1.output")),
+        }),
+        source_status: SourceHealthStatus::ReadableIndexed,
+        result: Some(TaskResult::new("completed")),
+        usage: Some(UsageSummary::new("usage-summary")),
+        duration: Some(RelativeDuration {
+            amount: DurationAmount::new(3),
+            unit: DurationUnit::Minutes,
+        }),
+    }
+}
+
 fn session_card() -> SessionCard {
     SessionCard {
         reference: session_reference(),
         source: SourceKind::Claude,
         source_identifier: SourceIdentifier::new("claude-session-1"),
+        producer_session_identifier: Some(SessionIdentifier::new("session-uuid-1")),
+        transcript_locator: Some(SourceLocator {
+            root: FilesystemPath::new("/home/li/.claude/projects"),
+            relative_path: Some(RootRelativePath::new("project-session.jsonl")),
+        }),
         started_at: Some(Timestamp::new("20260705T120000Z")),
         last_observed_at: Some(Timestamp::new("20260705T130000Z")),
         subagent_count: Some(ItemCount::new(1)),
@@ -187,6 +211,7 @@ fn subagent_card() -> SubagentCard {
         reference: subagent_reference(),
         session_reference: session_reference(),
         name: SubagentName::new("ContractSurface"),
+        task: Some(task_metadata()),
         authored_status: AuthoredStatus::AgentAuthored,
         output_count: Some(ItemCount::new(2)),
         size: exact_size(),
@@ -201,6 +226,7 @@ fn output_card() -> OutputCard {
         session_reference: session_reference(),
         subagent_reference: Some(subagent_reference()),
         title: Some(OutputTitle::new("worker-output")),
+        task: Some(task_metadata()),
         provenance: output_provenance(),
         size: exact_size(),
         preview: Some(output_text_preview()),
@@ -261,6 +287,7 @@ fn transcript_block_card() -> TranscriptBlockCard {
         reference: transcript_block_reference(),
         session_reference: session_reference(),
         subagent_reference: Some(subagent_reference()),
+        task: Some(task_metadata()),
         kind: TranscriptBlockKind::ToolResult,
         block_index: TranscriptBlockIndex::new(7),
         provenance: transcript_block_provenance(),
@@ -285,6 +312,7 @@ fn transcript_block_filter() -> TranscriptBlockFilter {
         }),
         session_reference: Some(session_reference()),
         subagent_reference: Some(subagent_reference()),
+        task_identifier: Some(TaskIdentifier::new("task-1")),
         kind_selection: TranscriptBlockKindSelection::OnlyTranscriptBlockKinds(
             SelectedTranscriptBlockKinds {
                 kinds: vec![
@@ -336,6 +364,7 @@ fn subagent_list_request() -> SubagentListRequest {
         filter: SubagentListFilter {
             session_reference: session_reference(),
             authored_status: AuthoredStatusFilter::AnyAuthoredStatus,
+            task_identifier: Some(TaskIdentifier::new("task-1")),
         },
         page: page_request(),
     }
@@ -348,6 +377,7 @@ fn output_list_request() -> OutputListRequest {
             source_selection: SourceSelection::AllConfigured,
             session_reference: Some(session_reference()),
             subagent_reference: Some(subagent_reference()),
+            task_identifier: Some(TaskIdentifier::new("task-1")),
             authored_status: AuthoredStatusFilter::OnlyAuthoredStatus(
                 AuthoredStatus::AgentAuthored,
             ),
@@ -620,6 +650,9 @@ fn canonical_examples() -> Vec<CanonicalExample> {
     let mut examples = vec![
         CanonicalExample::Request(AggregatorRequest::Collect(canonical_evidence_request())),
         CanonicalExample::Request(AggregatorRequest::Version(Version { client_name: None })),
+        CanonicalExample::Request(AggregatorRequest::ObserveHealth(RuntimeHealthRequest {
+            request_identifier: RequestIdentifier::new("req-health"),
+        })),
     ];
     examples.extend(
         output_interface_requests()
@@ -648,8 +681,38 @@ fn canonical_examples() -> Vec<CanonicalExample> {
         })),
         CanonicalExample::Reply(AggregatorReply::VersionReported(VersionReport {
             contract_name: ContractName::new("signal-aggregator"),
-            contract_version: ContractVersion::new("0.3.0"),
+            contract_version: ContractVersion::new("0.4.0"),
         })),
+        CanonicalExample::Reply(AggregatorReply::RuntimeHealthObserved(
+            RuntimeHealthObserved {
+                request_identifier: RequestIdentifier::new("req-health"),
+                capabilities: RuntimeCapabilities {
+                    health_observation: RuntimeCapabilityStatus::Supported,
+                    transcript_only_configuration: RuntimeCapabilityStatus::Supported,
+                    claude_subagent_output_sources: RuntimeCapabilityStatus::Supported,
+                },
+                sources: vec![SourceHealthCard {
+                    source: SourceKind::Claude,
+                    source_identifier: SourceIdentifier::new("claude-transcript-1"),
+                    locator: SourceLocator {
+                        root: FilesystemPath::new("/home/li/.claude/projects"),
+                        relative_path: Some(RootRelativePath::new("project-session.jsonl")),
+                    },
+                    status: SourceHealthStatus::ReadableIndexed,
+                    discovered_files: ItemCount::new(1),
+                    indexed_records: ItemCount::new(1),
+                    malformed_records: ItemCount::new(0),
+                    unreadable_records: ItemCount::new(0),
+                }],
+                index: IndexHealth {
+                    status: SourceHealthStatus::ReadableIndexed,
+                    session_count: ItemCount::new(1),
+                    subagent_count: ItemCount::new(1),
+                    output_count: ItemCount::new(1),
+                    transcript_block_count: ItemCount::new(1),
+                },
+            },
+        )),
         CanonicalExample::Reply(AggregatorReply::EvidenceRejected(EvidenceRejected {
             request_identifier: RequestIdentifier::new("req-20260705"),
             operation: AggregatorOperationKind::Collect,
@@ -770,7 +833,7 @@ fn version_request_and_reply_round_trip_through_nota() {
     round_trip_nota(AggregatorRequest::Version(Version { client_name: None }));
     round_trip_nota(AggregatorReply::VersionReported(VersionReport {
         contract_name: ContractName::new("signal-aggregator"),
-        contract_version: ContractVersion::new("0.3.0"),
+        contract_version: ContractVersion::new("0.4.0"),
     }));
 }
 
@@ -935,6 +998,7 @@ fn operation_heads_are_contract_local() {
         &[
             "Collect",
             "Version",
+            "ObserveHealth",
             "ListSessions",
             "ListSubagents",
             "ListOutputs",
@@ -967,6 +1031,7 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
 [
   (Collect [EvidenceRequest])
   (Version [Version])
+  (ObserveHealth [RuntimeHealthRequest])
   (ListSessions [SessionListRequest])
   (ListSubagents [SubagentListRequest])
   (ListOutputs [OutputListRequest])
@@ -982,6 +1047,7 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
 [
   (EvidenceCollected [EvidencePackage])
   (VersionReported [VersionReport])
+  (RuntimeHealthObserved [RuntimeHealthObserved])
   (EvidenceRejected [EvidenceRejected])
   (SessionsListed [SessionsListed])
   (SubagentsListed [SubagentsListed])
@@ -1010,7 +1076,7 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   SourceSelection [AllConfigured Only]
   AllConfigured
   Only ([SourceKind])
-  SourceKind [Claude Codex Pi Repository]
+  SourceKind [Claude ClaudeSubagentOutput Codex Pi Repository]
   Projection [MetadataOnly IdentifiersOnly BoundedText]
   BoundedText (ByteLimit)
   LimitPolicy (SegmentLimit ByteLimit)
@@ -1040,9 +1106,12 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   OnlyAuthoredStatus (AuthoredStatus)
   OutputProvenance (SourceKind SourceIdentifier AuthoredStatus ?Timestamp)
   OutputTextExcerpt (OutputText ByteCount ?Truncation)
-  SessionCard (FragileSessionReference SourceKind SourceIdentifier ?Timestamp ?Timestamp ?ItemCount ?ItemCount SizeMetadata)
-  SubagentCard (FragileSubagentReference FragileSessionReference SubagentName AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
-  OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle OutputProvenance SizeMetadata ?OutputTextExcerpt)
+  SourceLocator (FilesystemPath ?RootRelativePath)
+  SourceHealthStatus [ReadableEmpty ReadableIndexed UnreadableRoot DiscoveryTruncated MalformedRecords IndexStoreUnreadable]
+  SubagentTaskMetadata (TaskIdentifier ?TaskTitle ?ToolUseIdentifier ?SourceLocator SourceHealthStatus ?TaskResult ?UsageSummary ?RelativeDuration)
+  SessionCard (FragileSessionReference SourceKind SourceIdentifier ?SessionIdentifier ?SourceLocator ?Timestamp ?Timestamp ?ItemCount ?ItemCount SizeMetadata)
+  SubagentCard (FragileSubagentReference FragileSessionReference SubagentName ?SubagentTaskMetadata AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
+  OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle ?SubagentTaskMetadata OutputProvenance SizeMetadata ?OutputTextExcerpt)
   OutputSegmentCard (FragileOutputSegmentReference FragileOutputReference SegmentIndex ?ByteRange ?LineRange SizeMetadata ?OutputTextExcerpt)
   TranscriptBlockTextQuery (CanonicalNotaTextQuery)
   TranscriptBlockSearchEvidence (CanonicalNotaTextQueryMatchEvidence)
@@ -1053,12 +1122,12 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   OnlyTranscriptBlockKinds (SelectedTranscriptBlockKinds)
   TranscriptBlockTextAvailability [ReadableText UnavailableText EncryptedText]
   TranscriptBlockProvenance (SourceKind SourceIdentifier AuthoredStatus ?Timestamp)
-  TranscriptBlockCard (FragileTranscriptBlockReference FragileSessionReference ?FragileSubagentReference TranscriptBlockKind TranscriptBlockIndex TranscriptBlockProvenance ?LineRange ?ByteRange SizeMetadata TranscriptBlockTextAvailability ?TranscriptTextExcerpt)
+  TranscriptBlockCard (FragileTranscriptBlockReference FragileSessionReference ?FragileSubagentReference ?SubagentTaskMetadata TranscriptBlockKind TranscriptBlockIndex TranscriptBlockProvenance ?LineRange ?ByteRange SizeMetadata TranscriptBlockTextAvailability ?TranscriptTextExcerpt)
   SessionListFilter (SourceSelection ?TimeWindow)
-  SubagentListFilter (FragileSessionReference AuthoredStatusFilter)
-  OutputListFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference AuthoredStatusFilter ?TimeWindow)
+  SubagentListFilter (FragileSessionReference AuthoredStatusFilter ?TaskIdentifier)
+  OutputListFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference ?TaskIdentifier AuthoredStatusFilter ?TimeWindow)
   OutputSegmentListFilter (FragileOutputReference)
-  TranscriptBlockFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference TranscriptBlockKindSelection AuthoredStatusFilter ?TimeWindow)
+  TranscriptBlockFilter (SourceSelection ?FragileSessionReference ?FragileSubagentReference ?TaskIdentifier TranscriptBlockKindSelection AuthoredStatusFilter ?TimeWindow)
   SessionListRequest (RequestIdentifier SessionListFilter PageRequest)
   SubagentListRequest (RequestIdentifier SubagentListFilter PageRequest)
   OutputListRequest (RequestIdentifier OutputListFilter PageRequest CardProjection)
@@ -1074,6 +1143,12 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   OutputReadRequest (RequestIdentifier FragileOutputReference OutputReadRange ByteLimit)
   TranscriptBlockEstimateRequest (RequestIdentifier FragileTranscriptBlockReference)
   TranscriptBlockReadRequest (RequestIdentifier FragileTranscriptBlockReference ByteLimit)
+  RuntimeHealthRequest (RequestIdentifier)
+  RuntimeCapabilityStatus [Supported Unsupported]
+  RuntimeCapabilities (RuntimeCapabilityStatus RuntimeCapabilityStatus RuntimeCapabilityStatus)
+  SourceHealthCard (SourceKind SourceIdentifier SourceLocator SourceHealthStatus ItemCount ItemCount ItemCount ItemCount)
+  IndexHealth (SourceHealthStatus ItemCount ItemCount ItemCount ItemCount)
+  RuntimeHealthObserved (RequestIdentifier RuntimeCapabilities [SourceHealthCard] IndexHealth)
   SessionsListed (RequestIdentifier [SessionCard] PageMetadata)
   SubagentsListed (RequestIdentifier [SubagentCard] PageMetadata)
   OutputsListed (RequestIdentifier [OutputCard] PageMetadata)
@@ -1104,7 +1179,6 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   (Status Scaffold)
 ]
 "#;
-
 struct SchemaSketchWitness {
     full_text: &'static str,
     expected_operation_heads: &'static [&'static str],
@@ -1149,6 +1223,7 @@ fn schema_sketch_matches_complete_manual_contract_witness() {
         expected_operation_heads: &[
             "Collect",
             "Version",
+            "ObserveHealth",
             "ListSessions",
             "ListSubagents",
             "ListOutputs",
@@ -1163,6 +1238,7 @@ fn schema_sketch_matches_complete_manual_contract_witness() {
         expected_reply_heads: &[
             "EvidenceCollected",
             "VersionReported",
+            "RuntimeHealthObserved",
             "EvidenceRejected",
             "SessionsListed",
             "SubagentsListed",

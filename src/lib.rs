@@ -88,6 +88,13 @@ string_newtype!(ContractVersion);
 string_newtype!(SubagentName);
 string_newtype!(OutputTitle);
 string_newtype!(OutputText);
+string_newtype!(SessionIdentifier);
+string_newtype!(TaskIdentifier);
+string_newtype!(TaskTitle);
+string_newtype!(ToolUseIdentifier);
+string_newtype!(TaskResult);
+string_newtype!(UsageSummary);
+string_newtype!(RootRelativePath);
 string_newtype!(
     /// Opaque daemon-local session handle. The daemon may reject it as stale or
     /// broken when the underlying transcript or artifact files change.
@@ -189,6 +196,7 @@ pub enum TimeWindow {
 )]
 pub enum SourceKind {
     Claude,
+    ClaudeSubagentOutput,
     Codex,
     Pi,
     Repository,
@@ -552,6 +560,8 @@ pub struct SessionCard {
     pub reference: FragileSessionReference,
     pub source: SourceKind,
     pub source_identifier: SourceIdentifier,
+    pub producer_session_identifier: Option<SessionIdentifier>,
+    pub transcript_locator: Option<SourceLocator>,
     pub started_at: Option<Timestamp>,
     pub last_observed_at: Option<Timestamp>,
     pub subagent_count: Option<ItemCount>,
@@ -566,6 +576,7 @@ pub struct SubagentCard {
     pub reference: FragileSubagentReference,
     pub session_reference: FragileSessionReference,
     pub name: SubagentName,
+    pub task: Option<SubagentTaskMetadata>,
     pub authored_status: AuthoredStatus,
     pub output_count: Option<ItemCount>,
     pub size: SizeMetadata,
@@ -581,6 +592,7 @@ pub struct OutputCard {
     pub session_reference: FragileSessionReference,
     pub subagent_reference: Option<FragileSubagentReference>,
     pub title: Option<OutputTitle>,
+    pub task: Option<SubagentTaskMetadata>,
     pub provenance: OutputProvenance,
     pub size: SizeMetadata,
     pub preview: Option<OutputTextExcerpt>,
@@ -699,6 +711,50 @@ pub enum TranscriptBlockTextAvailability {
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
+pub struct SourceLocator {
+    pub root: FilesystemPath,
+    pub relative_path: Option<RootRelativePath>,
+}
+
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum SourceHealthStatus {
+    ReadableEmpty,
+    ReadableIndexed,
+    UnreadableRoot,
+    DiscoveryTruncated,
+    MalformedRecords,
+    IndexStoreUnreadable,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SubagentTaskMetadata {
+    pub task_identifier: TaskIdentifier,
+    pub title: Option<TaskTitle>,
+    pub tool_use_identifier: Option<ToolUseIdentifier>,
+    pub output_locator: Option<SourceLocator>,
+    pub source_status: SourceHealthStatus,
+    pub result: Option<TaskResult>,
+    pub usage: Option<UsageSummary>,
+    pub duration: Option<RelativeDuration>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct TranscriptBlockProvenance {
     pub source: SourceKind,
     pub source_identifier: SourceIdentifier,
@@ -713,6 +769,7 @@ pub struct TranscriptBlockCard {
     pub reference: FragileTranscriptBlockReference,
     pub session_reference: FragileSessionReference,
     pub subagent_reference: Option<FragileSubagentReference>,
+    pub task: Option<SubagentTaskMetadata>,
     pub kind: TranscriptBlockKind,
     pub block_index: TranscriptBlockIndex,
     pub provenance: TranscriptBlockProvenance,
@@ -737,6 +794,7 @@ pub struct SessionListFilter {
 pub struct SubagentListFilter {
     pub session_reference: FragileSessionReference,
     pub authored_status: AuthoredStatusFilter,
+    pub task_identifier: Option<TaskIdentifier>,
 }
 
 #[derive(
@@ -746,6 +804,7 @@ pub struct OutputListFilter {
     pub source_selection: SourceSelection,
     pub session_reference: Option<FragileSessionReference>,
     pub subagent_reference: Option<FragileSubagentReference>,
+    pub task_identifier: Option<TaskIdentifier>,
     pub authored_status: AuthoredStatusFilter,
     pub time_window: Option<TimeWindow>,
 }
@@ -764,6 +823,7 @@ pub struct TranscriptBlockFilter {
     pub source_selection: SourceSelection,
     pub session_reference: Option<FragileSessionReference>,
     pub subagent_reference: Option<FragileSubagentReference>,
+    pub task_identifier: Option<TaskIdentifier>,
     pub kind_selection: TranscriptBlockKindSelection,
     pub authored_status: AuthoredStatusFilter,
     pub time_window: Option<TimeWindow>,
@@ -872,6 +932,75 @@ pub struct TranscriptBlockReadRequest {
     pub request_identifier: RequestIdentifier,
     pub block_reference: FragileTranscriptBlockReference,
     pub maximum_bytes: ByteLimit,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct RuntimeHealthRequest {
+    pub request_identifier: RequestIdentifier,
+}
+
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum RuntimeCapabilityStatus {
+    Supported,
+    Unsupported,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct RuntimeCapabilities {
+    pub health_observation: RuntimeCapabilityStatus,
+    pub transcript_only_configuration: RuntimeCapabilityStatus,
+    pub claude_subagent_output_sources: RuntimeCapabilityStatus,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SourceHealthCard {
+    pub source: SourceKind,
+    pub source_identifier: SourceIdentifier,
+    pub locator: SourceLocator,
+    pub status: SourceHealthStatus,
+    pub discovered_files: ItemCount,
+    pub indexed_records: ItemCount,
+    pub malformed_records: ItemCount,
+    pub unreadable_records: ItemCount,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct IndexHealth {
+    pub status: SourceHealthStatus,
+    pub session_count: ItemCount,
+    pub subagent_count: ItemCount,
+    pub output_count: ItemCount,
+    pub transcript_block_count: ItemCount,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct RuntimeHealthObserved {
+    pub request_identifier: RequestIdentifier,
+    pub capabilities: RuntimeCapabilities,
+    pub sources: Vec<SourceHealthCard>,
+    pub index: IndexHealth,
 }
 
 #[derive(
@@ -1072,6 +1201,7 @@ signal_channel! {
     channel Aggregator {
         operation Collect(EvidenceRequest),
         operation Version(Version),
+        operation ObserveHealth(RuntimeHealthRequest),
         operation ListSessions(SessionListRequest),
         operation ListSubagents(SubagentListRequest),
         operation ListOutputs(OutputListRequest),
@@ -1086,6 +1216,7 @@ signal_channel! {
     reply AggregatorReply {
         EvidenceCollected(EvidencePackage),
         VersionReported(VersionReport),
+        RuntimeHealthObserved(RuntimeHealthObserved),
         EvidenceRejected(EvidenceRejected),
         SessionsListed(SessionsListed),
         SubagentsListed(SubagentsListed),
