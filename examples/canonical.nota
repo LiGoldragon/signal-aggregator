@@ -12,7 +12,7 @@
 (EstimateTranscriptBlock (req-block-estimate fragile-block-1))
 (ReadTranscriptBlock (req-block-read fragile-block-1 62))
 (EvidenceCollected (pkg-20260705 req-20260705 (Recent (6 Hours)) 20260705T130000Z [] [] [] [] []))
-(VersionReported (signal-aggregator 0.4.0))
+(VersionReported (signal-aggregator 0.5.0))
 (RuntimeHealthObserved (req-health (Supported Supported Supported) [(Claude claude-transcript-1 (/home/li/.claude/projects (Some project-session.jsonl)) ReadableIndexed 1 1 0 0)] (ReadableIndexed 1 1 1 1)))
 (EvidenceRejected (req-20260705 Collect UnsupportedProjection))
 (SessionsListed (req-sessions [(fragile-session-1 Claude claude-session-1 (Some session-uuid-1) (Some (/home/li/.claude/projects (Some project-session.jsonl))) (Some 20260705T120000Z) (Some 20260705T130000Z) (Some 1) (Some 2) ((Some 256) (Some 8) (Some 2) Exact))] (2 1 (Some 4) (Some fragile-page-2) NewestFirst)))

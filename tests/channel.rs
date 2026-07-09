@@ -823,7 +823,7 @@ fn canonical_examples() -> Vec<CanonicalExample> {
         })),
         CanonicalExample::Reply(AggregatorReply::VersionReported(VersionReport {
             contract_name: ContractName::new("signal-aggregator"),
-            contract_version: ContractVersion::new("0.4.0"),
+            contract_version: ContractVersion::new("0.5.0"),
         })),
         CanonicalExample::Reply(AggregatorReply::RuntimeHealthObserved(
             RuntimeHealthObserved {
@@ -987,7 +987,7 @@ fn version_request_and_reply_round_trip_through_nota() {
     round_trip_nota(AggregatorRequest::Version(Version { client_name: None }));
     round_trip_nota(AggregatorReply::VersionReported(VersionReport {
         contract_name: ContractName::new("signal-aggregator"),
-        contract_version: ContractVersion::new("0.4.0"),
+        contract_version: ContractVersion::new("0.5.0"),
     }));
 }
 
