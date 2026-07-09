@@ -16,6 +16,9 @@ interfaces:
   contract surface they are speaking.
 - `ObserveHealth(RuntimeHealthRequest)` returns `RuntimeHealthObserved` with
   runtime capabilities, source health cards, and fragile-index health.
+- `InventorySessions` returns metadata-only complete session inventory cards and per-source scan completeness.
+- `LookupSession` resolves by fragile session reference, producer session identifier, or source locator.
+- `WriteSessionArchive`, `QuerySessionArchive`, and `ReadSessionArchive` let agents store and read agent-authored session summaries in an explicit aggregator-local archive path.
 - `ListSessions`, `ListSubagents`, `ListOutputs`, and `ListOutputSegments`
   return metadata cards with deterministic ordering, pagination metadata, opaque
   fragile references, size metadata, provenance, and at most bounded previews.
@@ -54,7 +57,8 @@ metadata-first output and transcript-block lists are first-class. List and healt
 previews, but full text content requires an explicit read request with a byte
 bound. Bounded text excerpts carry truncation facts. A caller that
 wants synthesis uses an agent to interpret the package, output read, or
-transcript block read after collection.
+transcript block read after collection. Session archive summaries are supplied
+by agents; the contract stores and bounds them without quote/paraphrase policy.
 
 The output references, segment references, transcript block references, session
 references, subagent references, and page cursors are named `Fragile*` because
