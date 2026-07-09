@@ -1250,7 +1250,7 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   SourceSelection [AllConfigured Only]
   AllConfigured
   Only ([SourceKind])
-  SourceKind [Claude ClaudeSubagentOutput Codex Pi Repository]
+  SourceKind [Claude ClaudeSubagentOutput Codex Pi PiSubagentOutput Repository]
   Projection [MetadataOnly IdentifiersOnly BoundedText]
   BoundedText (ByteLimit)
   LimitPolicy (SegmentLimit ByteLimit)
@@ -1270,7 +1270,7 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   ReadFailure (SourceKind ?FilesystemPath ?SourceIdentifier ReadFailureReason)
   SizeMetadata (?ByteCount ?LineCount ?ItemCount SizeCertainty)
   SizeCertainty [Exact Estimated Unknown]
-  ListingOrder [OldestFirst NewestFirst ReferenceAscending]
+  ListingOrder [OldestFirst NewestFirst OldestModifiedFirst NewestModifiedFirst ReferenceAscending]
   PageRequest (PageLimit ?FragilePageCursor ListingOrder)
   PageMetadata (PageLimit ItemCount ?ItemCount ?FragilePageCursor ListingOrder)
   CardProjection [MetadataOnly BoundedPreview]
@@ -1286,10 +1286,13 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   SessionInventoryCompleteness [Complete Resumable Truncated Failed]
   SessionLifecycleStatus [Current PreviouslyObserved SourceMissing SourceBroken]
   SessionArchiveStatus [NotArchived Archived ArchiveUnknown]
-  SessionInventorySourceReport (SourceKind SourceIdentifier SourceLocator SessionInventoryCompleteness ItemCount ItemCount ByteCount ?Timestamp ?Timestamp)
+  ScanLimitKind [ScanEntries DiscoveredFiles FileBytes LineBytes ReadFailures]
+  ScanLimitReport (ScanLimitKind ItemCount ?FilesystemPath)
+  SessionInventorySourceReport (SourceKind SourceIdentifier SourceLocator SessionInventoryCompleteness [ScanLimitReport] ItemCount ItemCount ByteCount ?Timestamp ?Timestamp)
   SessionInventoryScanReport ([SessionInventorySourceReport] ItemCount SessionInventoryCompleteness)
-  SessionInventoryCard (FragileSessionReference SourceKind SourceIdentifier ?SessionIdentifier SourceLocator ItemCount ByteCount ?Timestamp ?Timestamp ?Timestamp ?Timestamp ?ItemCount ?ItemCount SessionLifecycleStatus SourceHealthStatus SessionArchiveStatus)
-  SessionCard (FragileSessionReference SourceKind SourceIdentifier ?SessionIdentifier ?SourceLocator ?Timestamp ?Timestamp ?ItemCount ?ItemCount SizeMetadata)
+  SessionRole [MainSession SubagentOutputSession Unknown]
+  SessionInventoryCard (FragileSessionReference SessionRole SourceKind SourceIdentifier ?SessionIdentifier SourceLocator ItemCount ByteCount ?Timestamp ?Timestamp ?Timestamp ?Timestamp ?ItemCount ?ItemCount SessionLifecycleStatus SourceHealthStatus SessionArchiveStatus)
+  SessionCard (FragileSessionReference SessionRole SourceKind SourceIdentifier ?SessionIdentifier ?SourceLocator ?Timestamp ?Timestamp ?ItemCount ?ItemCount SizeMetadata)
   SubagentCard (FragileSubagentReference FragileSessionReference SubagentName ?SubagentTaskMetadata AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
   OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle ?SubagentTaskMetadata OutputProvenance SizeMetadata ?OutputTextExcerpt)
   OutputSegmentCard (FragileOutputSegmentReference FragileOutputReference SegmentIndex ?ByteRange ?LineRange SizeMetadata ?OutputTextExcerpt)
@@ -1340,8 +1343,8 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   SessionArchiveProvenanceProjection (ArchiveProvenanceText ByteCount ArchiveTextCompleteness)
   SessionArchiveRecordProjection (SessionArchiveRecordCard SessionInventoryCard SessionArchiveTextProjection SessionArchiveProvenanceProjection)
   RuntimeCapabilityStatus [Supported Unsupported]
-  RuntimeCapabilities (RuntimeCapabilityStatus RuntimeCapabilityStatus RuntimeCapabilityStatus)
-  SourceHealthCard (SourceKind SourceIdentifier SourceLocator SourceHealthStatus ItemCount ItemCount ItemCount ItemCount)
+  RuntimeCapabilities (RuntimeCapabilityStatus RuntimeCapabilityStatus RuntimeCapabilityStatus RuntimeCapabilityStatus)
+  SourceHealthCard (SourceKind SourceIdentifier SourceLocator SourceHealthStatus [ScanLimitReport] ItemCount ItemCount ItemCount ItemCount)
   IndexHealth (SourceHealthStatus ItemCount ItemCount ItemCount ItemCount)
   RuntimeHealthObserved (RequestIdentifier RuntimeCapabilities [SourceHealthCard] IndexHealth)
   SessionsInventoried (RequestIdentifier [SessionInventoryCard] SessionInventoryScanReport)
