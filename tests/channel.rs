@@ -206,6 +206,73 @@ fn session_card() -> SessionCard {
     }
 }
 
+fn session_inventory_card() -> SessionInventoryCard {
+    SessionInventoryCard {
+        reference: session_reference(),
+        source: SourceKind::Claude,
+        source_identifier: SourceIdentifier::new("claude-session-1"),
+        producer_session_identifier: Some(SessionIdentifier::new("session-uuid-1")),
+        locator: SourceLocator {
+            root: FilesystemPath::new("/home/li/.claude/projects"),
+            relative_path: Some(RootRelativePath::new("project-session.jsonl")),
+        },
+        file_count: ItemCount::new(1),
+        byte_count: ByteCount::new(512),
+        earliest_modified_at: Some(Timestamp::new("20260705T120000Z")),
+        latest_modified_at: Some(Timestamp::new("20260705T130000Z")),
+        started_at: Some(Timestamp::new("20260705T120000Z")),
+        last_observed_at: Some(Timestamp::new("20260705T130000Z")),
+        subagent_count: Some(ItemCount::new(1)),
+        output_count: Some(ItemCount::new(2)),
+        lifecycle_status: SessionLifecycleStatus::Current,
+        source_status: SourceHealthStatus::ReadableIndexed,
+        archive_status: SessionArchiveStatus::Archived,
+    }
+}
+
+fn session_inventory_scan_report() -> SessionInventoryScanReport {
+    SessionInventoryScanReport {
+        sources: vec![SessionInventorySourceReport {
+            source: SourceKind::Claude,
+            source_identifier: SourceIdentifier::new("claude-session-1"),
+            locator: SourceLocator {
+                root: FilesystemPath::new("/home/li/.claude/projects"),
+                relative_path: None,
+            },
+            completeness: SessionInventoryCompleteness::Complete,
+            discovered_files: ItemCount::new(1),
+            indexed_sessions: ItemCount::new(1),
+            byte_count: ByteCount::new(512),
+            earliest_modified_at: Some(Timestamp::new("20260705T120000Z")),
+            latest_modified_at: Some(Timestamp::new("20260705T130000Z")),
+        }],
+        total_sessions: ItemCount::new(1),
+        completeness: SessionInventoryCompleteness::Complete,
+    }
+}
+
+fn archive_record_card() -> SessionArchiveRecordCard {
+    SessionArchiveRecordCard {
+        record_identifier: ArchiveRecordIdentifier::new("archive-record-1"),
+        session_reference: session_reference(),
+        source: SourceKind::Claude,
+        source_identifier: SourceIdentifier::new("claude-session-1"),
+        producer_session_identifier: Some(SessionIdentifier::new("session-uuid-1")),
+        created_at: Timestamp::new("20260705T140000Z"),
+        summary_bytes: ByteCount::new(23),
+        provenance_bytes: ByteCount::new(13),
+    }
+}
+
+fn archive_record_draft() -> SessionArchiveRecordDraft {
+    SessionArchiveRecordDraft {
+        session: session_inventory_card(),
+        summary: ArchiveSummaryText::new("agent summary may quote"),
+        provenance: ArchiveProvenanceText::new("bounded reads"),
+        created_at: Timestamp::new("20260705T140000Z"),
+    }
+}
+
 fn subagent_card() -> SubagentCard {
     SubagentCard {
         reference: subagent_reference(),
@@ -581,6 +648,81 @@ fn transcript_block_interface_requests() -> Vec<AggregatorRequest> {
     ]
 }
 
+fn archive_interface_requests() -> Vec<AggregatorRequest> {
+    vec![
+        AggregatorRequest::InventorySessions(SessionInventoryRequest {
+            request_identifier: RequestIdentifier::new("req-inventory"),
+            source_selection: SourceSelection::AllConfigured,
+            archive_path: Some(ArchivePath::new("/tmp/aggregator-session-archive.rkyv")),
+        }),
+        AggregatorRequest::LookupSession(SessionLookupRequest {
+            request_identifier: RequestIdentifier::new("req-lookup"),
+            selector: SessionLookupSelector::ByReference(session_reference()),
+            archive_path: None,
+        }),
+        AggregatorRequest::WriteSessionArchive(SessionArchiveWriteRequest {
+            request_identifier: RequestIdentifier::new("req-archive-write"),
+            archive_path: ArchivePath::new("/tmp/aggregator-session-archive.rkyv"),
+            record: archive_record_draft(),
+        }),
+        AggregatorRequest::QuerySessionArchive(SessionArchiveQueryRequest {
+            request_identifier: RequestIdentifier::new("req-archive-query"),
+            archive_path: ArchivePath::new("/tmp/aggregator-session-archive.rkyv"),
+            session_reference: Some(session_reference()),
+        }),
+        AggregatorRequest::ReadSessionArchive(SessionArchiveReadRequest {
+            request_identifier: RequestIdentifier::new("req-archive-read"),
+            archive_path: ArchivePath::new("/tmp/aggregator-session-archive.rkyv"),
+            record_identifier: ArchiveRecordIdentifier::new("archive-record-1"),
+            maximum_summary_bytes: ByteLimit::new(64),
+            maximum_provenance_bytes: ByteLimit::new(64),
+        }),
+    ]
+}
+
+fn archive_interface_replies() -> Vec<AggregatorReply> {
+    vec![
+        AggregatorReply::SessionsInventoried(SessionsInventoried {
+            request_identifier: RequestIdentifier::new("req-inventory"),
+            sessions: vec![session_inventory_card()],
+            scan_report: session_inventory_scan_report(),
+        }),
+        AggregatorReply::SessionLookedUp(SessionLookedUp {
+            request_identifier: RequestIdentifier::new("req-lookup"),
+            sessions: vec![session_inventory_card()],
+            scan_report: session_inventory_scan_report(),
+        }),
+        AggregatorReply::SessionArchiveWritten(SessionArchiveWritten {
+            request_identifier: RequestIdentifier::new("req-archive-write"),
+            archive_path: ArchivePath::new("/tmp/aggregator-session-archive.rkyv"),
+            card: archive_record_card(),
+        }),
+        AggregatorReply::SessionArchiveQueried(SessionArchiveQueried {
+            request_identifier: RequestIdentifier::new("req-archive-query"),
+            archive_path: ArchivePath::new("/tmp/aggregator-session-archive.rkyv"),
+            records: vec![archive_record_card()],
+        }),
+        AggregatorReply::SessionArchiveRead(SessionArchiveRead {
+            request_identifier: RequestIdentifier::new("req-archive-read"),
+            archive_path: ArchivePath::new("/tmp/aggregator-session-archive.rkyv"),
+            record: SessionArchiveRecordProjection {
+                card: archive_record_card(),
+                session: session_inventory_card(),
+                summary: SessionArchiveTextProjection {
+                    text: ArchiveSummaryText::new("agent summary may quote"),
+                    byte_count: ByteCount::new(23),
+                    completeness: ArchiveTextCompleteness::Complete,
+                },
+                provenance: SessionArchiveProvenanceProjection {
+                    text: ArchiveProvenanceText::new("bounded reads"),
+                    byte_count: ByteCount::new(13),
+                    completeness: ArchiveTextCompleteness::Complete,
+                },
+            },
+        }),
+    ]
+}
+
 fn transcript_block_interface_replies() -> Vec<AggregatorReply> {
     vec![
         AggregatorReply::TranscriptBlocksListed(transcript_blocks_listed()),
@@ -791,6 +933,18 @@ fn output_interface_requests_round_trip_through_frame() {
 fn output_interface_replies_round_trip_through_frame() {
     for reply in output_interface_replies() {
         assert_eq!(round_trip_reply(reply.clone()), reply);
+    }
+}
+
+#[test]
+fn archive_interface_requests_and_replies_round_trip_through_frame_and_nota() {
+    for request in archive_interface_requests() {
+        assert_eq!(round_trip_request(request.clone()), request);
+        round_trip_nota(request);
+    }
+    for reply in archive_interface_replies() {
+        assert_eq!(round_trip_reply(reply.clone()), reply);
+        round_trip_nota(reply);
     }
 }
 
