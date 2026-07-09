@@ -203,6 +203,7 @@ pub enum SourceKind {
     ClaudeSubagentOutput,
     Codex,
     Pi,
+    PiSubagentOutput,
     Repository,
 }
 
@@ -478,6 +479,10 @@ pub enum ListingOrder {
     OldestFirst,
     /// Descending chronology key; equal keys break by fragile reference ascending.
     NewestFirst,
+    /// Ascending filesystem last-modified key; equal keys break by fragile reference ascending.
+    OldestModifiedFirst,
+    /// Descending filesystem last-modified key; equal keys break by fragile reference ascending.
+    NewestModifiedFirst,
     /// Fragile reference ascending, with no chronology key in the sort.
     ReferenceAscending,
 }
@@ -560,8 +565,18 @@ pub struct OutputTextExcerpt {
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
+pub enum SessionRole {
+    MainSession,
+    SubagentOutputSession,
+    Unknown,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct SessionCard {
     pub reference: FragileSessionReference,
+    pub role: SessionRole,
     pub source: SourceKind,
     pub source_identifier: SourceIdentifier,
     pub producer_session_identifier: Option<SessionIdentifier>,
@@ -804,11 +819,32 @@ pub enum SessionArchiveStatus {
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
+pub enum ScanLimitKind {
+    ScanEntries,
+    DiscoveredFiles,
+    FileBytes,
+    LineBytes,
+    ReadFailures,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct ScanLimitReport {
+    pub kind: ScanLimitKind,
+    pub limit: ItemCount,
+    pub path: Option<FilesystemPath>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct SessionInventorySourceReport {
     pub source: SourceKind,
     pub source_identifier: SourceIdentifier,
     pub locator: SourceLocator,
     pub completeness: SessionInventoryCompleteness,
+    pub scan_limits: Vec<ScanLimitReport>,
     pub discovered_files: ItemCount,
     pub indexed_sessions: ItemCount,
     pub byte_count: ByteCount,
@@ -830,6 +866,7 @@ pub struct SessionInventoryScanReport {
 )]
 pub struct SessionInventoryCard {
     pub reference: FragileSessionReference,
+    pub role: SessionRole,
     pub source: SourceKind,
     pub source_identifier: SourceIdentifier,
     pub producer_session_identifier: Option<SessionIdentifier>,
@@ -1246,6 +1283,7 @@ pub struct RuntimeCapabilities {
     pub health_observation: RuntimeCapabilityStatus,
     pub transcript_only_configuration: RuntimeCapabilityStatus,
     pub claude_subagent_output_sources: RuntimeCapabilityStatus,
+    pub pi_subagent_output_sources: RuntimeCapabilityStatus,
 }
 
 #[derive(
@@ -1256,6 +1294,7 @@ pub struct SourceHealthCard {
     pub source_identifier: SourceIdentifier,
     pub locator: SourceLocator,
     pub status: SourceHealthStatus,
+    pub scan_limits: Vec<ScanLimitReport>,
     pub discovered_files: ItemCount,
     pub indexed_records: ItemCount,
     pub malformed_records: ItemCount,

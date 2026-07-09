@@ -191,6 +191,7 @@ fn task_metadata() -> SubagentTaskMetadata {
 fn session_card() -> SessionCard {
     SessionCard {
         reference: session_reference(),
+        role: SessionRole::MainSession,
         source: SourceKind::Claude,
         source_identifier: SourceIdentifier::new("claude-session-1"),
         producer_session_identifier: Some(SessionIdentifier::new("session-uuid-1")),
@@ -209,6 +210,7 @@ fn session_card() -> SessionCard {
 fn session_inventory_card() -> SessionInventoryCard {
     SessionInventoryCard {
         reference: session_reference(),
+        role: SessionRole::MainSession,
         source: SourceKind::Claude,
         source_identifier: SourceIdentifier::new("claude-session-1"),
         producer_session_identifier: Some(SessionIdentifier::new("session-uuid-1")),
@@ -240,6 +242,7 @@ fn session_inventory_scan_report() -> SessionInventoryScanReport {
                 relative_path: None,
             },
             completeness: SessionInventoryCompleteness::Complete,
+            scan_limits: Vec::new(),
             discovered_files: ItemCount::new(1),
             indexed_sessions: ItemCount::new(1),
             byte_count: ByteCount::new(512),
@@ -832,6 +835,7 @@ fn canonical_examples() -> Vec<CanonicalExample> {
                     health_observation: RuntimeCapabilityStatus::Supported,
                     transcript_only_configuration: RuntimeCapabilityStatus::Supported,
                     claude_subagent_output_sources: RuntimeCapabilityStatus::Supported,
+                    pi_subagent_output_sources: RuntimeCapabilityStatus::Supported,
                 },
                 sources: vec![SourceHealthCard {
                     source: SourceKind::Claude,
@@ -841,6 +845,7 @@ fn canonical_examples() -> Vec<CanonicalExample> {
                         relative_path: Some(RootRelativePath::new("project-session.jsonl")),
                     },
                     status: SourceHealthStatus::ReadableIndexed,
+                    scan_limits: Vec::new(),
                     discovered_files: ItemCount::new(1),
                     indexed_records: ItemCount::new(1),
                     malformed_records: ItemCount::new(0),
