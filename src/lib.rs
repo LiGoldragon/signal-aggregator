@@ -95,6 +95,10 @@ string_newtype!(ToolUseIdentifier);
 string_newtype!(TaskResult);
 string_newtype!(UsageSummary);
 string_newtype!(RootRelativePath);
+string_newtype!(ArchivePath);
+string_newtype!(ArchiveRecordIdentifier);
+string_newtype!(ArchiveSummaryText);
+string_newtype!(ArchiveProvenanceText);
 string_newtype!(
     /// Opaque daemon-local session handle. The daemon may reject it as stale or
     /// broken when the underlying transcript or artifact files change.
@@ -739,6 +743,111 @@ pub enum SourceHealthStatus {
 }
 
 #[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum SessionInventoryCompleteness {
+    Complete,
+    Resumable,
+    Truncated,
+    Failed,
+}
+
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum SessionLifecycleStatus {
+    Current,
+    PreviouslyObserved,
+    SourceMissing,
+    SourceBroken,
+}
+
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum SessionArchiveStatus {
+    NotArchived,
+    Archived,
+    ArchiveUnknown,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionInventorySourceReport {
+    pub source: SourceKind,
+    pub source_identifier: SourceIdentifier,
+    pub locator: SourceLocator,
+    pub completeness: SessionInventoryCompleteness,
+    pub discovered_files: ItemCount,
+    pub indexed_sessions: ItemCount,
+    pub byte_count: ByteCount,
+    pub earliest_modified_at: Option<Timestamp>,
+    pub latest_modified_at: Option<Timestamp>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionInventoryScanReport {
+    pub sources: Vec<SessionInventorySourceReport>,
+    pub total_sessions: ItemCount,
+    pub completeness: SessionInventoryCompleteness,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionInventoryCard {
+    pub reference: FragileSessionReference,
+    pub source: SourceKind,
+    pub source_identifier: SourceIdentifier,
+    pub producer_session_identifier: Option<SessionIdentifier>,
+    pub locator: SourceLocator,
+    pub file_count: ItemCount,
+    pub byte_count: ByteCount,
+    pub earliest_modified_at: Option<Timestamp>,
+    pub latest_modified_at: Option<Timestamp>,
+    pub started_at: Option<Timestamp>,
+    pub last_observed_at: Option<Timestamp>,
+    pub subagent_count: Option<ItemCount>,
+    pub output_count: Option<ItemCount>,
+    pub lifecycle_status: SessionLifecycleStatus,
+    pub source_status: SourceHealthStatus,
+    pub archive_status: SessionArchiveStatus,
+}
+
+#[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct SubagentTaskMetadata {
@@ -939,6 +1048,177 @@ pub struct TranscriptBlockReadRequest {
 )]
 pub struct RuntimeHealthRequest {
     pub request_identifier: RequestIdentifier,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionInventoryRequest {
+    pub request_identifier: RequestIdentifier,
+    pub source_selection: SourceSelection,
+    pub archive_path: Option<ArchivePath>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub enum SessionLookupSelector {
+    ByReference(FragileSessionReference),
+    ByProducerSession(SessionIdentifier),
+    BySourceLocator(SourceLocator),
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionLookupRequest {
+    pub request_identifier: RequestIdentifier,
+    pub selector: SessionLookupSelector,
+    pub archive_path: Option<ArchivePath>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveRecordDraft {
+    pub session: SessionInventoryCard,
+    pub summary: ArchiveSummaryText,
+    pub provenance: ArchiveProvenanceText,
+    pub created_at: Timestamp,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveWriteRequest {
+    pub request_identifier: RequestIdentifier,
+    pub archive_path: ArchivePath,
+    pub record: SessionArchiveRecordDraft,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveQueryRequest {
+    pub request_identifier: RequestIdentifier,
+    pub archive_path: ArchivePath,
+    pub session_reference: Option<FragileSessionReference>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveReadRequest {
+    pub request_identifier: RequestIdentifier,
+    pub archive_path: ArchivePath,
+    pub record_identifier: ArchiveRecordIdentifier,
+    pub maximum_summary_bytes: ByteLimit,
+    pub maximum_provenance_bytes: ByteLimit,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveRecordCard {
+    pub record_identifier: ArchiveRecordIdentifier,
+    pub session_reference: FragileSessionReference,
+    pub source: SourceKind,
+    pub source_identifier: SourceIdentifier,
+    pub producer_session_identifier: Option<SessionIdentifier>,
+    pub created_at: Timestamp,
+    pub summary_bytes: ByteCount,
+    pub provenance_bytes: ByteCount,
+}
+
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum ArchiveTextCompleteness {
+    Complete,
+    Truncated,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveTextProjection {
+    pub text: ArchiveSummaryText,
+    pub byte_count: ByteCount,
+    pub completeness: ArchiveTextCompleteness,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveProvenanceProjection {
+    pub text: ArchiveProvenanceText,
+    pub byte_count: ByteCount,
+    pub completeness: ArchiveTextCompleteness,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveRecordProjection {
+    pub card: SessionArchiveRecordCard,
+    pub session: SessionInventoryCard,
+    pub summary: SessionArchiveTextProjection,
+    pub provenance: SessionArchiveProvenanceProjection,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionsInventoried {
+    pub request_identifier: RequestIdentifier,
+    pub sessions: Vec<SessionInventoryCard>,
+    pub scan_report: SessionInventoryScanReport,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionLookedUp {
+    pub request_identifier: RequestIdentifier,
+    pub sessions: Vec<SessionInventoryCard>,
+    pub scan_report: SessionInventoryScanReport,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveWritten {
+    pub request_identifier: RequestIdentifier,
+    pub archive_path: ArchivePath,
+    pub card: SessionArchiveRecordCard,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveQueried {
+    pub request_identifier: RequestIdentifier,
+    pub archive_path: ArchivePath,
+    pub records: Vec<SessionArchiveRecordCard>,
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SessionArchiveRead {
+    pub request_identifier: RequestIdentifier,
+    pub archive_path: ArchivePath,
+    pub record: SessionArchiveRecordProjection,
 }
 
 #[derive(
@@ -1202,6 +1482,11 @@ signal_channel! {
         operation Collect(EvidenceRequest),
         operation Version(Version),
         operation ObserveHealth(RuntimeHealthRequest),
+        operation InventorySessions(SessionInventoryRequest),
+        operation LookupSession(SessionLookupRequest),
+        operation WriteSessionArchive(SessionArchiveWriteRequest),
+        operation QuerySessionArchive(SessionArchiveQueryRequest),
+        operation ReadSessionArchive(SessionArchiveReadRequest),
         operation ListSessions(SessionListRequest),
         operation ListSubagents(SubagentListRequest),
         operation ListOutputs(OutputListRequest),
@@ -1217,6 +1502,11 @@ signal_channel! {
         EvidenceCollected(EvidencePackage),
         VersionReported(VersionReport),
         RuntimeHealthObserved(RuntimeHealthObserved),
+        SessionsInventoried(SessionsInventoried),
+        SessionLookedUp(SessionLookedUp),
+        SessionArchiveWritten(SessionArchiveWritten),
+        SessionArchiveQueried(SessionArchiveQueried),
+        SessionArchiveRead(SessionArchiveRead),
         EvidenceRejected(EvidenceRejected),
         SessionsListed(SessionsListed),
         SubagentsListed(SubagentsListed),

@@ -999,6 +999,11 @@ fn operation_heads_are_contract_local() {
             "Collect",
             "Version",
             "ObserveHealth",
+            "InventorySessions",
+            "LookupSession",
+            "WriteSessionArchive",
+            "QuerySessionArchive",
+            "ReadSessionArchive",
             "ListSessions",
             "ListSubagents",
             "ListOutputs",
@@ -1032,6 +1037,11 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   (Collect [EvidenceRequest])
   (Version [Version])
   (ObserveHealth [RuntimeHealthRequest])
+  (InventorySessions [SessionInventoryRequest])
+  (LookupSession [SessionLookupRequest])
+  (WriteSessionArchive [SessionArchiveWriteRequest])
+  (QuerySessionArchive [SessionArchiveQueryRequest])
+  (ReadSessionArchive [SessionArchiveReadRequest])
   (ListSessions [SessionListRequest])
   (ListSubagents [SubagentListRequest])
   (ListOutputs [OutputListRequest])
@@ -1048,6 +1058,11 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   (EvidenceCollected [EvidencePackage])
   (VersionReported [VersionReport])
   (RuntimeHealthObserved [RuntimeHealthObserved])
+  (SessionsInventoried [SessionsInventoried])
+  (SessionLookedUp [SessionLookedUp])
+  (SessionArchiveWritten [SessionArchiveWritten])
+  (SessionArchiveQueried [SessionArchiveQueried])
+  (SessionArchiveRead [SessionArchiveRead])
   (EvidenceRejected [EvidenceRejected])
   (SessionsListed [SessionsListed])
   (SubagentsListed [SubagentsListed])
@@ -1109,6 +1124,12 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   SourceLocator (FilesystemPath ?RootRelativePath)
   SourceHealthStatus [ReadableEmpty ReadableIndexed UnreadableRoot DiscoveryTruncated MalformedRecords IndexStoreUnreadable]
   SubagentTaskMetadata (TaskIdentifier ?TaskTitle ?ToolUseIdentifier ?SourceLocator SourceHealthStatus ?TaskResult ?UsageSummary ?RelativeDuration)
+  SessionInventoryCompleteness [Complete Resumable Truncated Failed]
+  SessionLifecycleStatus [Current PreviouslyObserved SourceMissing SourceBroken]
+  SessionArchiveStatus [NotArchived Archived ArchiveUnknown]
+  SessionInventorySourceReport (SourceKind SourceIdentifier SourceLocator SessionInventoryCompleteness ItemCount ItemCount ByteCount ?Timestamp ?Timestamp)
+  SessionInventoryScanReport ([SessionInventorySourceReport] ItemCount SessionInventoryCompleteness)
+  SessionInventoryCard (FragileSessionReference SourceKind SourceIdentifier ?SessionIdentifier SourceLocator ItemCount ByteCount ?Timestamp ?Timestamp ?Timestamp ?Timestamp ?ItemCount ?ItemCount SessionLifecycleStatus SourceHealthStatus SessionArchiveStatus)
   SessionCard (FragileSessionReference SourceKind SourceIdentifier ?SessionIdentifier ?SourceLocator ?Timestamp ?Timestamp ?ItemCount ?ItemCount SizeMetadata)
   SubagentCard (FragileSubagentReference FragileSessionReference SubagentName ?SubagentTaskMetadata AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
   OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle ?SubagentTaskMetadata OutputProvenance SizeMetadata ?OutputTextExcerpt)
@@ -1144,11 +1165,31 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   TranscriptBlockEstimateRequest (RequestIdentifier FragileTranscriptBlockReference)
   TranscriptBlockReadRequest (RequestIdentifier FragileTranscriptBlockReference ByteLimit)
   RuntimeHealthRequest (RequestIdentifier)
+  SessionInventoryRequest (RequestIdentifier SourceSelection ?ArchivePath)
+  SessionLookupSelector [ByReference ByProducerSession BySourceLocator]
+  ByReference (FragileSessionReference)
+  ByProducerSession (SessionIdentifier)
+  BySourceLocator (SourceLocator)
+  SessionLookupRequest (RequestIdentifier SessionLookupSelector ?ArchivePath)
+  SessionArchiveRecordDraft (SessionInventoryCard ArchiveSummaryText ArchiveProvenanceText Timestamp)
+  SessionArchiveWriteRequest (RequestIdentifier ArchivePath SessionArchiveRecordDraft)
+  SessionArchiveQueryRequest (RequestIdentifier ArchivePath ?FragileSessionReference)
+  SessionArchiveReadRequest (RequestIdentifier ArchivePath ArchiveRecordIdentifier ByteLimit ByteLimit)
+  SessionArchiveRecordCard (ArchiveRecordIdentifier FragileSessionReference SourceKind SourceIdentifier ?SessionIdentifier Timestamp ByteCount ByteCount)
+  ArchiveTextCompleteness [Complete Truncated]
+  SessionArchiveTextProjection (ArchiveSummaryText ByteCount ArchiveTextCompleteness)
+  SessionArchiveProvenanceProjection (ArchiveProvenanceText ByteCount ArchiveTextCompleteness)
+  SessionArchiveRecordProjection (SessionArchiveRecordCard SessionInventoryCard SessionArchiveTextProjection SessionArchiveProvenanceProjection)
   RuntimeCapabilityStatus [Supported Unsupported]
   RuntimeCapabilities (RuntimeCapabilityStatus RuntimeCapabilityStatus RuntimeCapabilityStatus)
   SourceHealthCard (SourceKind SourceIdentifier SourceLocator SourceHealthStatus ItemCount ItemCount ItemCount ItemCount)
   IndexHealth (SourceHealthStatus ItemCount ItemCount ItemCount ItemCount)
   RuntimeHealthObserved (RequestIdentifier RuntimeCapabilities [SourceHealthCard] IndexHealth)
+  SessionsInventoried (RequestIdentifier [SessionInventoryCard] SessionInventoryScanReport)
+  SessionLookedUp (RequestIdentifier [SessionInventoryCard] SessionInventoryScanReport)
+  SessionArchiveWritten (RequestIdentifier ArchivePath SessionArchiveRecordCard)
+  SessionArchiveQueried (RequestIdentifier ArchivePath [SessionArchiveRecordCard])
+  SessionArchiveRead (RequestIdentifier ArchivePath SessionArchiveRecordProjection)
   SessionsListed (RequestIdentifier [SessionCard] PageMetadata)
   SubagentsListed (RequestIdentifier [SubagentCard] PageMetadata)
   OutputsListed (RequestIdentifier [OutputCard] PageMetadata)
@@ -1175,7 +1216,7 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
 }
 
 [
-  (Version 0 3)
+  (Version 0 5)
   (Status Scaffold)
 ]
 "#;
@@ -1224,6 +1265,11 @@ fn schema_sketch_matches_complete_manual_contract_witness() {
             "Collect",
             "Version",
             "ObserveHealth",
+            "InventorySessions",
+            "LookupSession",
+            "WriteSessionArchive",
+            "QuerySessionArchive",
+            "ReadSessionArchive",
             "ListSessions",
             "ListSubagents",
             "ListOutputs",
@@ -1239,6 +1285,11 @@ fn schema_sketch_matches_complete_manual_contract_witness() {
             "EvidenceCollected",
             "VersionReported",
             "RuntimeHealthObserved",
+            "SessionsInventoried",
+            "SessionLookedUp",
+            "SessionArchiveWritten",
+            "SessionArchiveQueried",
+            "SessionArchiveRead",
             "EvidenceRejected",
             "SessionsListed",
             "SubagentsListed",
@@ -1255,6 +1306,20 @@ fn schema_sketch_matches_complete_manual_contract_witness() {
         expected_data_heads: &[
             "EvidenceRequest",
             "EvidencePackage",
+            "SessionInventoryRequest",
+            "SessionLookupRequest",
+            "SessionArchiveWriteRequest",
+            "SessionArchiveQueryRequest",
+            "SessionArchiveReadRequest",
+            "SessionInventoryCard",
+            "SessionInventoryScanReport",
+            "SessionArchiveRecordCard",
+            "SessionArchiveRecordProjection",
+            "SessionsInventoried",
+            "SessionLookedUp",
+            "SessionArchiveWritten",
+            "SessionArchiveQueried",
+            "SessionArchiveRead",
             "SessionListRequest",
             "SubagentListRequest",
             "OutputListRequest",
