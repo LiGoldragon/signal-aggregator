@@ -8,7 +8,7 @@ transcript-block listings/search. Output text and transcript block text are read
 only through explicit bounded reads using fragile daemon-local references. The
 contract carries source volumes, timestamps, locators, repository changes,
 transcript segments, transcript block cards, output provenance, size metadata,
-truncations, canonical `nota-text-query` query/evidence wrappers, and
+truncations, canonical `dotos-text-query` query/evidence wrappers, and
 read/rejection facts. It does not carry synthesized review or judgment.
 
 ## Range and ordering semantics

@@ -104,8 +104,8 @@
   SubagentCard (FragileSubagentReference FragileSessionReference SubagentName ?SubagentTaskMetadata AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
   OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle ?SubagentTaskMetadata OutputProvenance SizeMetadata ?OutputTextExcerpt)
   OutputSegmentCard (FragileOutputSegmentReference FragileOutputReference SegmentIndex ?ByteRange ?LineRange SizeMetadata ?OutputTextExcerpt)
-  TranscriptBlockTextQuery (CanonicalNotaTextQuery)
-  TranscriptBlockSearchEvidence (CanonicalNotaTextQueryMatchEvidence)
+  TranscriptBlockTextQuery (CanonicalDotosTextQuery)
+  TranscriptBlockSearchEvidence (CanonicalDotosTextQueryMatchEvidence)
   TranscriptBlockKind [UserPrompt AgentResponse ToolCall ToolResult Inference SystemInstruction Attachment SessionEvent Unclassified]
   SelectedTranscriptBlockKinds ([TranscriptBlockKind])
   TranscriptBlockKindSelection [AllTranscriptBlockKinds OnlyTranscriptBlockKinds]

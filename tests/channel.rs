@@ -1,5 +1,5 @@
-use nota::{NotaDecode, NotaEncode, NotaSource};
-use nota_text_query::{
+use dotos::{DotosDecode, DotosEncode, DotosSource};
+use dotos_text_query::{
     MatchEvidence, NearEvidence, Occurrence, Query, QueryTerm, WordDistance,
     evidence::NearOccurrencePair,
 };
@@ -73,12 +73,12 @@ fn round_trip_reply(reply_payload: AggregatorReply) -> AggregatorReply {
     }
 }
 
-fn round_trip_nota<Value>(value: Value)
+fn round_trip_dotos<Value>(value: Value)
 where
-    Value: NotaEncode + NotaDecode + PartialEq + std::fmt::Debug,
+    Value: DotosEncode + DotosDecode + PartialEq + std::fmt::Debug,
 {
-    let text = value.to_nota();
-    let decoded = NotaSource::new(&text).parse::<Value>().expect("decode");
+    let text = value.to_dotos();
+    let decoded = DotosSource::new(&text).parse::<Value>().expect("decode");
     assert_eq!(decoded, value);
 }
 
@@ -744,25 +744,25 @@ impl CanonicalExample {
     fn assert_matches_line(&self, line: &str) {
         match self {
             Self::Request(expected) => {
-                let decoded = NotaSource::new(line)
+                let decoded = DotosSource::new(line)
                     .parse::<AggregatorRequest>()
                     .expect("canonical request decode");
                 assert_eq!(&decoded, expected, "canonical request decode for {line}");
-                assert_eq!(decoded.to_nota(), line, "canonical request encode");
+                assert_eq!(decoded.to_dotos(), line, "canonical request encode");
             }
             Self::Reply(expected) => {
-                let decoded = NotaSource::new(line)
+                let decoded = DotosSource::new(line)
                     .parse::<AggregatorReply>()
                     .expect("canonical reply decode");
                 assert_eq!(&decoded, expected, "canonical reply decode for {line}");
-                assert_eq!(decoded.to_nota(), line, "canonical reply encode");
+                assert_eq!(decoded.to_dotos(), line, "canonical reply encode");
             }
         }
     }
 }
 
 fn canonical_example_lines() -> Vec<&'static str> {
-    include_str!("../examples/canonical.nota")
+    include_str!("../examples/canonical.dotos")
         .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
@@ -942,14 +942,14 @@ fn output_interface_replies_round_trip_through_frame() {
 }
 
 #[test]
-fn archive_interface_requests_and_replies_round_trip_through_frame_and_nota() {
+fn archive_interface_requests_and_replies_round_trip_through_frame_and_dotos() {
     for request in archive_interface_requests() {
         assert_eq!(round_trip_request(request.clone()), request);
-        round_trip_nota(request);
+        round_trip_dotos(request);
     }
     for reply in archive_interface_replies() {
         assert_eq!(round_trip_reply(reply.clone()), reply);
-        round_trip_nota(reply);
+        round_trip_dotos(reply);
     }
 }
 
@@ -988,28 +988,28 @@ fn fragile_reference_rejections_round_trip_through_frame() {
 }
 
 #[test]
-fn version_request_and_reply_round_trip_through_nota() {
-    round_trip_nota(AggregatorRequest::Version(Version { client_name: None }));
-    round_trip_nota(AggregatorReply::VersionReported(VersionReport {
+fn version_request_and_reply_round_trip_through_dotos() {
+    round_trip_dotos(AggregatorRequest::Version(Version { client_name: None }));
+    round_trip_dotos(AggregatorReply::VersionReported(VersionReport {
         contract_name: ContractName::new("signal-aggregator"),
         contract_version: ContractVersion::new("0.5.0"),
     }));
 }
 
 #[test]
-fn collect_request_round_trips_through_nota() {
-    round_trip_nota(AggregatorRequest::Collect(evidence_request()));
+fn collect_request_round_trips_through_dotos() {
+    round_trip_dotos(AggregatorRequest::Collect(evidence_request()));
 }
 
 #[test]
-fn output_interface_requests_and_replies_round_trip_through_nota() {
+fn output_interface_requests_and_replies_round_trip_through_dotos() {
     for request in output_interface_requests() {
-        round_trip_nota(request);
+        round_trip_dotos(request);
     }
     for reply in output_interface_replies() {
-        round_trip_nota(reply);
+        round_trip_dotos(reply);
     }
-    round_trip_nota(AggregatorReply::OperationRejected(OperationRejected {
+    round_trip_dotos(AggregatorReply::OperationRejected(OperationRejected {
         request_identifier: RequestIdentifier::new("req-read"),
         operation: AggregatorOperationKind::ReadOutput,
         reason: OperationRejectionReason::InvalidRange,
@@ -1018,14 +1018,14 @@ fn output_interface_requests_and_replies_round_trip_through_nota() {
 }
 
 #[test]
-fn transcript_block_requests_and_replies_round_trip_through_nota() {
+fn transcript_block_requests_and_replies_round_trip_through_dotos() {
     for request in transcript_block_interface_requests() {
-        round_trip_nota(request);
+        round_trip_dotos(request);
     }
     for reply in transcript_block_interface_replies() {
-        round_trip_nota(reply);
+        round_trip_dotos(reply);
     }
-    round_trip_nota(AggregatorReply::OperationRejected(OperationRejected {
+    round_trip_dotos(AggregatorReply::OperationRejected(OperationRejected {
         request_identifier: RequestIdentifier::new("req-block-read"),
         operation: AggregatorOperationKind::ReadTranscriptBlock,
         reason: OperationRejectionReason::FragileReferenceBroken,
@@ -1100,7 +1100,7 @@ fn transcript_block_cards_preserve_source_kind_without_final_response_inference(
         card.text_availability,
         TranscriptBlockTextAvailability::ReadableText
     );
-    assert!(!card.to_nota().contains("FinalResponse"));
+    assert!(!card.to_dotos().contains("FinalResponse"));
 
     let TranscriptBlockKindSelection::OnlyTranscriptBlockKinds(selection) =
         transcript_block_filter().kind_selection
@@ -1296,8 +1296,8 @@ const EXPECTED_SCHEMA_SKETCH: &str = r#"{}
   SubagentCard (FragileSubagentReference FragileSessionReference SubagentName ?SubagentTaskMetadata AuthoredStatus ?ItemCount SizeMetadata ?Timestamp ?Timestamp)
   OutputCard (FragileOutputReference FragileSessionReference ?FragileSubagentReference ?OutputTitle ?SubagentTaskMetadata OutputProvenance SizeMetadata ?OutputTextExcerpt)
   OutputSegmentCard (FragileOutputSegmentReference FragileOutputReference SegmentIndex ?ByteRange ?LineRange SizeMetadata ?OutputTextExcerpt)
-  TranscriptBlockTextQuery (CanonicalNotaTextQuery)
-  TranscriptBlockSearchEvidence (CanonicalNotaTextQueryMatchEvidence)
+  TranscriptBlockTextQuery (CanonicalDotosTextQuery)
+  TranscriptBlockSearchEvidence (CanonicalDotosTextQueryMatchEvidence)
   TranscriptBlockKind [UserPrompt AgentResponse ToolCall ToolResult Inference SystemInstruction Attachment SessionEvent Unclassified]
   SelectedTranscriptBlockKinds ([TranscriptBlockKind])
   TranscriptBlockKindSelection [AllTranscriptBlockKinds OnlyTranscriptBlockKinds]
@@ -1522,7 +1522,7 @@ fn contract_has_no_synthesis_reply() {
         reason: OperationRejectionReason::Unsupported,
         reference: Some(RejectedFragileReference::Output(output_reference())),
     })
-    .to_nota();
+    .to_dotos();
     for forbidden in ["Summary", "Review", "Recommendation", "Score", "Judgment"] {
         assert!(!reply_text.contains(forbidden));
     }

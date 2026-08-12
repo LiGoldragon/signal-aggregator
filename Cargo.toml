@@ -13,12 +13,12 @@ name = "signal_aggregator"
 path = "src/lib.rs"
 
 [features]
-default = ["nota-text"]
-nota-text = ["nota-text-query/nota-text", "signal-frame/nota-text"]
+default = ["dotos-text"]
+dotos-text = ["dotos-text-query/dotos-text", "signal-frame/dotos-text"]
 
 [dependencies]
-nota            = { package = "nota", git = "https://github.com/LiGoldragon/nota-next.git", branch = "main" }
-nota-text-query = { git = "https://github.com/LiGoldragon/nota-text-query.git", branch = "main", default-features = false }
+dotos            = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "1facca44fbcb" }
+dotos-text-query = { git = "https://github.com/LiGoldragon/dotos-text-query.git", branch = "main", default-features = false }
 signal-frame    = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
 rkyv            = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 thiserror       = "2"
