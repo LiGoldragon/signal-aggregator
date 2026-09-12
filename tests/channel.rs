@@ -5,9 +5,19 @@ use dotos_text_query::{
 };
 use signal_aggregator::*;
 use signal_frame::{
-    ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
-    SignalOperationHeads, SubReply,
+    ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, RootCode,
+    SessionEpoch, SignalOperationHeads, SubReply, VariantCode, WireRoute,
 };
+
+/// The contract binds route meaning locally; the round trip only needs a
+/// stable request/reply pair, so root 0 carries requests and root 1 replies.
+fn request_route() -> WireRoute {
+    WireRoute::new(RootCode::new(0), VariantCode::new(0))
+}
+
+fn reply_route() -> WireRoute {
+    WireRoute::new(RootCode::new(1), VariantCode::new(0))
+}
 
 fn request_identifier() -> RequestIdentifier {
     RequestIdentifier::new("req-test")
@@ -42,10 +52,13 @@ fn exchange() -> ExchangeIdentifier {
 }
 
 fn round_trip_request(request: AggregatorRequest) -> AggregatorRequest {
-    let frame = AggregatorFrame::new(AggregatorFrameBody::Request {
-        exchange: exchange(),
-        request: request.clone().into_request(),
-    });
+    let frame = AggregatorFrame::new(
+        request_route(),
+        AggregatorFrameBody::Request {
+            exchange: exchange(),
+            request: request.clone().into_request(),
+        },
+    );
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = AggregatorFrame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
@@ -55,10 +68,13 @@ fn round_trip_request(request: AggregatorRequest) -> AggregatorRequest {
 }
 
 fn round_trip_reply(reply_payload: AggregatorReply) -> AggregatorReply {
-    let frame = AggregatorFrame::new(AggregatorFrameBody::Reply {
-        exchange: exchange(),
-        reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply_payload.clone()))),
-    });
+    let frame = AggregatorFrame::new(
+        reply_route(),
+        AggregatorFrameBody::Reply {
+            exchange: exchange(),
+            reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply_payload.clone()))),
+        },
+    );
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = AggregatorFrame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
@@ -826,7 +842,7 @@ fn canonical_examples() -> Vec<CanonicalExample> {
         })),
         CanonicalExample::Reply(AggregatorReply::VersionReported(VersionReport {
             contract_name: ContractName::new("signal-aggregator"),
-            contract_version: ContractVersion::new("0.5.0"),
+            contract_version: ContractVersion::new("0.6.0"),
         })),
         CanonicalExample::Reply(AggregatorReply::RuntimeHealthObserved(
             RuntimeHealthObserved {
@@ -992,7 +1008,7 @@ fn version_request_and_reply_round_trip_through_dotos() {
     round_trip_dotos(AggregatorRequest::Version(Version { client_name: None }));
     round_trip_dotos(AggregatorReply::VersionReported(VersionReport {
         contract_name: ContractName::new("signal-aggregator"),
-        contract_version: ContractVersion::new("0.5.0"),
+        contract_version: ContractVersion::new("0.6.0"),
     }));
 }
 

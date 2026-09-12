@@ -1,6 +1,6 @@
 [package]
 name         = "signal-aggregator"
-version      = "0.5.0"
+version      = "0.6.0"
 edition      = "2024"
 rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
@@ -17,9 +17,9 @@ default = ["dotos-text"]
 dotos-text = ["dotos-text-query/dotos-text", "signal-frame/dotos-text"]
 
 [dependencies]
-dotos            = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "1facca44fbcb" }
-dotos-text-query = { git = "https://github.com/LiGoldragon/dotos-text-query.git", branch = "main", default-features = false }
-signal-frame    = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
+dotos            = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3" }
+dotos-text-query = { git = "https://github.com/LiGoldragon/dotos-text-query.git", rev = "aee1a446bb3236858d7157bad88dd63550abc25b", default-features = false }
+signal-frame    = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "8aa0bcaeb29fe9e461a11706a469638d2fd109ac" }
 rkyv            = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 thiserror       = "2"
 

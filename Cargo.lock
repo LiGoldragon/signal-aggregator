@@ -46,35 +46,16 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 [[package]]
 name = "dotos"
 version = "0.10.0"
-source = "git+https://github.com/LiGoldragon/dotos.git?branch=main#1facca44fbcb37633f71fcf6f73bd693fbe56a5e"
+source = "git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3#80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3"
 dependencies = [
- "dotos-derive 0.5.0 (git+https://github.com/LiGoldragon/dotos.git?branch=main)",
- "rkyv",
-]
-
-[[package]]
-name = "dotos"
-version = "0.10.0"
-source = "git+https://github.com/LiGoldragon/dotos.git?rev=1facca44fbcb#1facca44fbcb37633f71fcf6f73bd693fbe56a5e"
-dependencies = [
- "dotos-derive 0.5.0 (git+https://github.com/LiGoldragon/dotos.git?rev=1facca44fbcb)",
+ "dotos-derive",
  "rkyv",
 ]
 
 [[package]]
 name = "dotos-derive"
 version = "0.5.0"
-source = "git+https://github.com/LiGoldragon/dotos.git?branch=main#1facca44fbcb37633f71fcf6f73bd693fbe56a5e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
-name = "dotos-derive"
-version = "0.5.0"
-source = "git+https://github.com/LiGoldragon/dotos.git?rev=1facca44fbcb#1facca44fbcb37633f71fcf6f73bd693fbe56a5e"
+source = "git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3#80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -84,9 +65,9 @@ dependencies = [
 [[package]]
 name = "dotos-text-query"
 version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/dotos-text-query.git?branch=main#acf6b4b935443602f0bf575adfb22e974c5dde53"
+source = "git+https://github.com/LiGoldragon/dotos-text-query.git?rev=aee1a446bb3236858d7157bad88dd63550abc25b#aee1a446bb3236858d7157bad88dd63550abc25b"
 dependencies = [
- "dotos 0.10.0 (git+https://github.com/LiGoldragon/dotos.git?branch=main)",
+ "dotos",
  "rkyv",
  "thiserror",
 ]
@@ -280,9 +261,9 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "signal-aggregator"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
- "dotos 0.10.0 (git+https://github.com/LiGoldragon/dotos.git?rev=1facca44fbcb)",
+ "dotos",
  "dotos-text-query",
  "rkyv",
  "signal-frame",
@@ -291,10 +272,10 @@ dependencies = [
 
 [[package]]
 name = "signal-frame"
-version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#26c738c0b94cdbcac5719966c66244c39e5413ab"
+version = "0.3.1"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=8aa0bcaeb29fe9e461a11706a469638d2fd109ac#8aa0bcaeb29fe9e461a11706a469638d2fd109ac"
 dependencies = [
- "dotos 0.10.0 (git+https://github.com/LiGoldragon/dotos.git?rev=1facca44fbcb)",
+ "dotos",
  "paste",
  "rkyv",
  "signal-frame-macros",
@@ -303,8 +284,8 @@ dependencies = [
 
 [[package]]
 name = "signal-frame-macros"
-version = "0.1.1"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#26c738c0b94cdbcac5719966c66244c39e5413ab"
+version = "0.1.2"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=8aa0bcaeb29fe9e461a11706a469638d2fd109ac#8aa0bcaeb29fe9e461a11706a469638d2fd109ac"
 dependencies = [
  "proc-macro2",
  "quote",

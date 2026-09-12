@@ -12,6 +12,16 @@ pub use dotos_text_query::{MatchEvidence as TextMatchEvidence, Query as TextQuer
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_frame::signal_channel;
 
+/// The ordinary Aggregator contract occupies the first wire seat in its family.
+pub enum AggregatorWire {}
+
+impl signal_frame::WireContract for AggregatorWire {
+    const BINDING: signal_frame::ContractBinding = signal_frame::ContractBinding::new(
+        signal_frame::ContractId::new(core::num::NonZeroU32::MIN),
+        signal_frame::WireRevision::new(core::num::NonZeroU16::MIN),
+    );
+}
+
 macro_rules! string_newtype {
     ($(#[$meta:meta])* $name:ident) => {
         $(#[$meta])*
@@ -1517,7 +1527,7 @@ pub struct EvidenceRejected {
 }
 
 signal_channel! {
-    channel Aggregator {
+    channel Aggregator contract AggregatorWire {
         operation Collect(EvidenceRequest),
         operation Version(Version),
         operation ObserveHealth(RuntimeHealthRequest),
