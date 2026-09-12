@@ -13,6 +13,7 @@ use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_frame::signal_channel;
 
 /// The ordinary Aggregator contract occupies the first wire seat in its family.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AggregatorWire {}
 
 impl signal_frame::WireContract for AggregatorWire {
@@ -1580,5 +1581,14 @@ pub type AggregatorReplyEnvelope = ReplyEnvelope;
 impl AggregatorRequest {
     pub fn operation_kind(&self) -> AggregatorOperationKind {
         self.kind()
+    }
+
+    /// Contract-local request route: root zero carries requests, and the
+    /// variant byte is the operation's position in this contract's heads.
+    pub fn wire_route(&self) -> signal_frame::WireRoute {
+        signal_frame::WireRoute::new(
+            signal_frame::RootCode::new(0),
+            signal_frame::VariantCode::new(self.kind() as u8),
+        )
     }
 }
