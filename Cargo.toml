@@ -1,29 +1,32 @@
 [package]
-name         = "signal-aggregator"
-version      = "0.6.0"
-edition      = "2024"
+name = "signal-aggregator"
+version = "0.7.0"
+edition = "2024"
 rust-version = "1.89"
-license      = "MIT OR Apache-2.0"
-repository   = "https://github.com/LiGoldragon/signal-aggregator"
-description  = "Signal contract for aggregator evidence collection."
-publish      = false
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/LiGoldragon/signal-aggregator"
+description = "Signal contract for aggregator evidence collection."
+publish = false
+build = "build.rs"
 
 [lib]
 name = "signal_aggregator"
 path = "src/lib.rs"
 
 [features]
-default = ["dotos-text"]
-dotos-text = ["dotos-text-query/dotos-text", "signal-frame/dotos-text"]
+default = []
+datom = ["dep:datom-codec", "dep:protos", "signal/datom"]
 
 [dependencies]
-dotos            = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3" }
-dotos-text-query = { git = "https://github.com/LiGoldragon/dotos-text-query.git", rev = "aee1a446bb3236858d7157bad88dd63550abc25b", default-features = false }
-signal-frame    = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "8aa0bcaeb29fe9e461a11706a469638d2fd109ac" }
-rkyv            = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-thiserror       = "2"
+datom-codec = { git = "https://github.com/LiGoldragon/datom-codec", rev = "627db67f2655efd9f786864009955005fd8ab2ad", optional = true }
+protos = { git = "https://github.com/LiGoldragon/protos", rev = "171b21f65337983ab624b7b906397a4f1f92c5a3", optional = true }
+rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
+signal = { git = "https://github.com/LiGoldragon/signal", rev = "8f9a0deb701cebbea518679548df4a795affc918", default-features = false }
+
+[build-dependencies]
+ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "de3d9928b156f2e1a92d060b7817af201abfdbef" }
 
 [lints.rust]
 unsafe_code = "forbid"
-unused      = { level = "warn", priority = -1 }
-dead_code   = "warn"
+unused = { level = "warn", priority = -1 }
+dead_code = "warn"

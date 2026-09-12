@@ -1,0 +1,399 @@
+; The ordinary Aggregator Signal contract.
+;
+; Bounded collection requests, normalized evidence packages, metadata-first
+; output discovery, and structured transcript block search and read. The
+; transcript text query and its matching evidence are carried as flat node
+; arenas: the wire frame is an rkyv archive, which admits no recursive type.
+Signal
+[]
+[ Collect.EvidenceRequest
+  Version.VersionQuery
+  ObserveHealth.RuntimeHealthRequest
+  InventorySessions.SessionInventoryRequest
+  LookupSession.SessionLookupRequest
+  WriteSessionArchive.SessionArchiveWriteRequest
+  QuerySessionArchive.SessionArchiveQueryRequest
+  ReadSessionArchive.SessionArchiveReadRequest
+  ListSessions.SessionListRequest
+  ListSubagents.SubagentListRequest
+  ListOutputs.OutputListRequest
+  ListOutputSegments.OutputSegmentListRequest
+  EstimateOutput.OutputEstimateRequest
+  ReadOutput.OutputReadRequest
+  ListTranscriptBlocks.TranscriptBlockListRequest
+  SearchTranscriptBlocks.TranscriptBlockSearchRequest
+  EstimateTranscriptBlock.TranscriptBlockEstimateRequest
+  ReadTranscriptBlock.TranscriptBlockReadRequest ]
+[ EvidenceCollected.EvidencePackage
+  VersionReported.VersionReport
+  RuntimeHealthObserved.RuntimeHealthObserved
+  SessionsInventoried.SessionsInventoried
+  SessionLookedUp.SessionLookedUp
+  SessionArchiveWritten.SessionArchiveWritten
+  SessionArchiveQueried.SessionArchiveQueried
+  SessionArchiveRead.SessionArchiveRead
+  EvidenceRejected.EvidenceRejected
+  SessionsListed.SessionsListed
+  SubagentsListed.SubagentsListed
+  OutputsListed.OutputsListed
+  OutputSegmentsListed.OutputSegmentsListed
+  OutputEstimated.OutputEstimated
+  OutputRead.OutputRead
+  OperationRejected.OperationRejected
+  TranscriptBlocksListed.TranscriptBlocksListed
+  TranscriptBlocksSearched.TranscriptBlocksSearched
+  TranscriptBlockEstimated.TranscriptBlockEstimated
+  TranscriptBlockRead.TranscriptBlockRead ]
+[ RequestIdentifier.String
+  PackageIdentifier.String
+  Timestamp.String
+  FilesystemPath.String
+  SourceIdentifier.String
+  RepositoryIdentifier.String
+  CommitIdentifier.String
+  RepositoryPath.String
+  TranscriptSegmentIdentifier.String
+  TranscriptText.String
+  ContractName.String
+  ContractVersion.String
+  SubagentName.String
+  OutputTitle.String
+  OutputText.String
+  SessionIdentifier.String
+  TaskIdentifier.String
+  TaskTitle.String
+  ToolUseIdentifier.String
+  TaskResult.String
+  UsageSummary.String
+  RootRelativePath.String
+  ArchivePath.String
+  ArchiveRecordIdentifier.String
+  ArchiveSummaryText.String
+  ArchiveProvenanceText.String
+  FragileSessionReference.String
+  FragileSubagentReference.String
+  FragileOutputReference.String
+  FragileOutputSegmentReference.String
+  FragileTranscriptBlockReference.String
+  FragilePageCursor.String
+
+  DurationAmount.Integer
+  ByteCount.Integer
+  ByteLimit.Integer
+  SegmentLimit.Integer
+  ItemCount.Integer
+  LineNumber.Integer
+  LineCount.Integer
+  PageLimit.Integer
+  SegmentIndex.Integer
+  TranscriptBlockIndex.Integer
+
+  OperationKind.[ Collect Version ObserveHealth InventorySessions LookupSession
+                  WriteSessionArchive QuerySessionArchive ReadSessionArchive
+                  ListSessions ListSubagents ListOutputs ListOutputSegments
+                  EstimateOutput ReadOutput ListTranscriptBlocks
+                  SearchTranscriptBlocks EstimateTranscriptBlock ReadTranscriptBlock ]
+
+  DurationUnit.[ Minutes Hours Days ]
+  RelativeDuration.{ DurationAmount DurationUnit }
+  StartTimestamp.Timestamp
+  EndTimestamp.Timestamp
+  TimeRange.{ StartTimestamp EndTimestamp }
+  TimeWindow.[ Recent.RelativeDuration Range.TimeRange Since.Timestamp ]
+
+  SourceKind.[ Claude ClaudeSubagentOutput Codex Pi PiSubagentOutput Repository ]
+  SourceKinds.Vector<SourceKind>
+  SelectedSources.{ SourceKinds }
+  SourceSelection.[ AllConfigured Only.SelectedSources ]
+
+  MaximumBytes.ByteLimit
+  MaximumSegments.SegmentLimit
+  BoundedTextProjection.{ MaximumBytes }
+  Projection.[ MetadataOnly IdentifiersOnly BoundedText.BoundedTextProjection ]
+  LimitPolicy.{ MaximumSegments MaximumBytes }
+  EvidenceRequest.{ RequestIdentifier TimeWindow SourceSelection Projection LimitPolicy }
+
+  EarliestTimestamp.Option<Timestamp>
+  LatestTimestamp.Option<Timestamp>
+  SourceVolume.{ SourceKind SourceIdentifier ItemCount ByteCount EarliestTimestamp LatestTimestamp }
+
+  StartLineNumber.LineNumber
+  EndLineNumber.LineNumber
+  LineRange.{ StartLineNumber EndLineNumber }
+  StartByteCount.ByteCount
+  EndByteCount.ByteCount
+  ByteRange.{ StartByteCount EndByteCount }
+
+  TruncationReason.[ RequestLimit SourceLimit ProjectionLimit ]
+  OriginalBytes.Option<ByteCount>
+  ProjectedBytes.ByteCount
+  Truncation.{ SourceKind Option<FilesystemPath> OriginalBytes ProjectedBytes TruncationReason }
+
+  TranscriptTextExcerpt.{ TranscriptText ByteCount Option<Truncation> }
+  SegmentProjection.[ MetadataOnly IdentifiersOnly Text.TranscriptTextExcerpt ]
+  TranscriptSegment.{ SourceKind SourceIdentifier TranscriptSegmentIdentifier FilesystemPath
+                      Option<Timestamp> Option<LineRange> Option<ByteRange> SegmentProjection }
+
+  RepositoryWorktreeState.[ Clean HasChanges NotObserved ]
+  ChangedPaths.Vector<RepositoryPath>
+  CommitTimestamp.Option<Timestamp>
+  RepositoryChange.{ RepositoryIdentifier FilesystemPath Option<CommitIdentifier> CommitTimestamp
+                     ChangedPaths RepositoryWorktreeState }
+
+  ReadFailureReason.[ Missing PermissionDenied Malformed UnsupportedFormat IoFailure ]
+  ReadFailure.{ SourceKind Option<FilesystemPath> Option<SourceIdentifier> ReadFailureReason }
+
+  SourceVolumes.Vector<SourceVolume>
+  TranscriptSegments.Vector<TranscriptSegment>
+  RepositoryChanges.Vector<RepositoryChange>
+  Truncations.Vector<Truncation>
+  ReadFailures.Vector<ReadFailure>
+  CollectedAt.Timestamp
+  EvidencePackage.{ PackageIdentifier RequestIdentifier TimeWindow CollectedAt
+                    SourceVolumes TranscriptSegments RepositoryChanges
+                    Truncations ReadFailures }
+
+  SizeCertainty.[ Exact Estimated Unknown ]
+  SegmentCount.Option<ItemCount>
+  SizeMetadata.{ Option<ByteCount> Option<LineCount> SegmentCount SizeCertainty }
+
+  ListingOrder.[ OldestFirst NewestFirst OldestModifiedFirst NewestModifiedFirst ReferenceAscending ]
+  PageCursor.Option<FragilePageCursor>
+  NextPageCursor.Option<FragilePageCursor>
+  ReturnedItems.ItemCount
+  TotalItems.Option<ItemCount>
+  PageRequest.{ PageLimit PageCursor ListingOrder }
+  PageMetadata.{ PageLimit ReturnedItems TotalItems NextPageCursor ListingOrder }
+
+  CardProjection.[ MetadataOnly BoundedPreview.BoundedTextProjection ]
+  AuthoredStatus.[ AgentAuthored HumanAuthored MixedAuthorship UnknownAuthorship ]
+  AuthoredStatusFilter.[ AnyAuthoredStatus OnlyAuthoredStatus.AuthoredStatus ]
+  ProducedAt.Option<Timestamp>
+  OutputProvenance.{ SourceKind SourceIdentifier AuthoredStatus ProducedAt }
+  OutputTextExcerpt.{ OutputText ByteCount Option<Truncation> }
+  SourceLocator.{ FilesystemPath Option<RootRelativePath> }
+  SourceHealthStatus.[ ReadableEmpty ReadableIndexed UnreadableRoot DiscoveryTruncated
+                       MalformedRecords IndexStoreUnreadable ]
+  TaskDuration.Option<RelativeDuration>
+  SubagentTaskMetadata.{ TaskIdentifier Option<TaskTitle> Option<ToolUseIdentifier>
+                         Option<SourceLocator> SourceHealthStatus Option<TaskResult>
+                         Option<UsageSummary> TaskDuration }
+
+  SessionInventoryCompleteness.[ Complete Resumable Truncated Failed ]
+  SessionLifecycleStatus.[ Current PreviouslyObserved SourceMissing SourceBroken ]
+  SessionArchiveStatus.[ NotArchived Archived ArchiveUnknown ]
+  ScanLimitKind.[ ScanEntries DiscoveredFiles FileBytes LineBytes ReadFailures ]
+  ScanLimit.ItemCount
+  ScanLimitReport.{ ScanLimitKind ScanLimit Option<FilesystemPath> }
+
+  ScanLimits.Vector<ScanLimitReport>
+  DiscoveredFiles.ItemCount
+  IndexedSessions.ItemCount
+  EarliestModifiedAt.Option<Timestamp>
+  LatestModifiedAt.Option<Timestamp>
+  SessionInventorySourceReport.{ SourceKind SourceIdentifier SourceLocator
+                                 SessionInventoryCompleteness ScanLimits
+                                 DiscoveredFiles IndexedSessions ByteCount
+                                 EarliestModifiedAt LatestModifiedAt }
+  SessionInventorySourceReports.Vector<SessionInventorySourceReport>
+  TotalSessions.ItemCount
+  SessionInventoryScanReport.{ SessionInventorySourceReports TotalSessions
+                               SessionInventoryCompleteness }
+
+  SessionRole.[ MainSession SubagentOutputSession Unknown ]
+  FileCount.ItemCount
+  StartedAt.Option<Timestamp>
+  LastObservedAt.Option<Timestamp>
+  SubagentCount.Option<ItemCount>
+  OutputCount.Option<ItemCount>
+  SessionInventoryCard.{ FragileSessionReference SessionRole SourceKind SourceIdentifier
+                         Option<SessionIdentifier> SourceLocator FileCount ByteCount
+                         EarliestModifiedAt LatestModifiedAt StartedAt LastObservedAt
+                         SubagentCount OutputCount SessionLifecycleStatus SourceHealthStatus
+                         SessionArchiveStatus }
+  SessionCard.{ FragileSessionReference SessionRole SourceKind SourceIdentifier
+                Option<SessionIdentifier> Option<SourceLocator> StartedAt LastObservedAt
+                SubagentCount OutputCount SizeMetadata }
+  FirstObservedAt.Option<Timestamp>
+  SubagentCard.{ FragileSubagentReference FragileSessionReference SubagentName
+                 Option<SubagentTaskMetadata> AuthoredStatus OutputCount SizeMetadata
+                 FirstObservedAt LastObservedAt }
+  OutputCard.{ FragileOutputReference FragileSessionReference Option<FragileSubagentReference>
+               Option<OutputTitle> Option<SubagentTaskMetadata> OutputProvenance SizeMetadata
+               Option<OutputTextExcerpt> }
+  OutputSegmentCard.{ FragileOutputSegmentReference FragileOutputReference SegmentIndex
+                      Option<ByteRange> Option<LineRange> SizeMetadata Option<OutputTextExcerpt> }
+
+  SearchWord.String
+  SearchWords.Vector<SearchWord>
+  SearchPhrase.{ SearchWords }
+  TextQueryTerm.[ Word.SearchWord Phrase.SearchPhrase ]
+  WordDistance.Integer
+  LeftTextQueryTerm.TextQueryTerm
+  RightTextQueryTerm.TextQueryTerm
+  NearTextQuery.{ LeftTextQueryTerm RightTextQueryTerm WordDistance }
+  TextQueryNodeIndex.Integer
+  TextQueryNodeIndices.Vector<TextQueryNodeIndex>
+  TextQueryNode.[ Contains.TextQueryTerm
+                  AllOf.TextQueryNodeIndices
+                  AnyOf.TextQueryNodeIndices
+                  Not.TextQueryNodeIndex
+                  Near.NearTextQuery ]
+  TextQueryRoot.TextQueryNodeIndex
+  TextQueryNodes.Vector<TextQueryNode>
+  TranscriptBlockTextQuery.{ TextQueryNodes TextQueryRoot }
+
+  WordPosition.Integer
+  StartWordPosition.WordPosition
+  EndWordPosition.WordPosition
+  Occurrence.{ StartWordPosition EndWordPosition }
+  Occurrences.Vector<Occurrence>
+  ContainsEvidence.{ TextQueryTerm Occurrences }
+  LeftOccurrence.Occurrence
+  RightOccurrence.Occurrence
+  OccurrenceGap.WordDistance
+  NearOccurrencePair.{ LeftOccurrence RightOccurrence OccurrenceGap }
+  NearOccurrencePairs.Vector<NearOccurrencePair>
+  NearEvidence.{ LeftTextQueryTerm RightTextQueryTerm WordDistance NearOccurrencePairs }
+  MatchEvidenceIndex.Integer
+  MatchEvidenceIndices.Vector<MatchEvidenceIndex>
+  MatchEvidenceNode.[ Contains.ContainsEvidence
+                      AllOf.MatchEvidenceIndices
+                      AnyOf.MatchEvidenceIndices
+                      Not
+                      Near.NearEvidence ]
+  MatchEvidenceRoot.MatchEvidenceIndex
+  MatchEvidenceNodes.Vector<MatchEvidenceNode>
+  TranscriptBlockSearchEvidence.{ MatchEvidenceNodes MatchEvidenceRoot }
+
+  TranscriptBlockKind.[ UserPrompt AgentResponse ToolCall ToolResult Inference
+                        SystemInstruction Attachment SessionEvent Unclassified ]
+  TranscriptBlockKinds.Vector<TranscriptBlockKind>
+  SelectedTranscriptBlockKinds.{ TranscriptBlockKinds }
+  TranscriptBlockKindSelection.[ AllTranscriptBlockKinds
+                                 OnlyTranscriptBlockKinds.SelectedTranscriptBlockKinds ]
+  TranscriptBlockTextAvailability.[ ReadableText UnavailableText EncryptedText ]
+  ObservedAt.Option<Timestamp>
+  TranscriptBlockProvenance.{ SourceKind SourceIdentifier AuthoredStatus ObservedAt }
+  TranscriptBlockCard.{ FragileTranscriptBlockReference FragileSessionReference
+                        Option<FragileSubagentReference> Option<SubagentTaskMetadata>
+                        TranscriptBlockKind TranscriptBlockIndex TranscriptBlockProvenance
+                        Option<LineRange> Option<ByteRange> SizeMetadata
+                        TranscriptBlockTextAvailability Option<TranscriptTextExcerpt> }
+
+  SessionListFilter.{ SourceSelection Option<TimeWindow> }
+  SubagentListFilter.{ FragileSessionReference AuthoredStatusFilter Option<TaskIdentifier> }
+  OutputListFilter.{ SourceSelection Option<FragileSessionReference>
+                     Option<FragileSubagentReference> Option<TaskIdentifier>
+                     AuthoredStatusFilter Option<TimeWindow> }
+  OutputSegmentListFilter.{ FragileOutputReference }
+  TranscriptBlockFilter.{ SourceSelection Option<FragileSessionReference>
+                          Option<FragileSubagentReference> Option<TaskIdentifier>
+                          TranscriptBlockKindSelection AuthoredStatusFilter Option<TimeWindow> }
+
+  SessionListRequest.{ RequestIdentifier SessionListFilter PageRequest }
+  SubagentListRequest.{ RequestIdentifier SubagentListFilter PageRequest }
+  OutputListRequest.{ RequestIdentifier OutputListFilter PageRequest CardProjection }
+  OutputSegmentListRequest.{ RequestIdentifier OutputSegmentListFilter PageRequest CardProjection }
+  TranscriptBlockListRequest.{ RequestIdentifier TranscriptBlockFilter PageRequest CardProjection }
+  TranscriptBlockSearchRequest.{ RequestIdentifier TranscriptBlockFilter TranscriptBlockTextQuery
+                                 PageRequest CardProjection }
+
+  OutputReadRange.[ EntireOutput Bytes.ByteRange Lines.LineRange
+                    Segment.FragileOutputSegmentReference ]
+  OutputEstimateRequest.{ RequestIdentifier FragileOutputReference OutputReadRange }
+  OutputReadRequest.{ RequestIdentifier FragileOutputReference OutputReadRange MaximumBytes }
+  TranscriptBlockEstimateRequest.{ RequestIdentifier FragileTranscriptBlockReference }
+  TranscriptBlockReadRequest.{ RequestIdentifier FragileTranscriptBlockReference MaximumBytes }
+
+  RuntimeHealthRequest.{ RequestIdentifier }
+  SessionInventoryRequest.{ RequestIdentifier SourceSelection Option<ArchivePath> }
+  SessionLookupSelector.[ ByReference.FragileSessionReference
+                          ByProducerSession.SessionIdentifier
+                          BySourceLocator.SourceLocator ]
+  SessionLookupRequest.{ RequestIdentifier SessionLookupSelector Option<ArchivePath> }
+  CreatedAt.Timestamp
+  SessionArchiveRecordDraft.{ SessionInventoryCard ArchiveSummaryText ArchiveProvenanceText CreatedAt }
+  SessionArchiveWriteRequest.{ RequestIdentifier ArchivePath SessionArchiveRecordDraft }
+  SessionArchiveQueryRequest.{ RequestIdentifier ArchivePath Option<FragileSessionReference> }
+  MaximumSummaryBytes.ByteLimit
+  MaximumProvenanceBytes.ByteLimit
+  SessionArchiveReadRequest.{ RequestIdentifier ArchivePath ArchiveRecordIdentifier
+                              MaximumSummaryBytes MaximumProvenanceBytes }
+  SummaryBytes.ByteCount
+  ProvenanceBytes.ByteCount
+  SessionArchiveRecordCard.{ ArchiveRecordIdentifier FragileSessionReference SourceKind
+                             SourceIdentifier Option<SessionIdentifier> CreatedAt
+                             SummaryBytes ProvenanceBytes }
+  ArchiveTextCompleteness.[ Complete Truncated ]
+  SessionArchiveTextProjection.{ ArchiveSummaryText ByteCount ArchiveTextCompleteness }
+  SessionArchiveProvenanceProjection.{ ArchiveProvenanceText ByteCount ArchiveTextCompleteness }
+  SessionArchiveRecordProjection.{ SessionArchiveRecordCard SessionInventoryCard
+                                   SessionArchiveTextProjection
+                                   SessionArchiveProvenanceProjection }
+
+  RuntimeCapabilityStatus.[ Supported Unsupported ]
+  HealthObservationCapability.RuntimeCapabilityStatus
+  TranscriptOnlyConfigurationCapability.RuntimeCapabilityStatus
+  ClaudeSubagentOutputSourcesCapability.RuntimeCapabilityStatus
+  PiSubagentOutputSourcesCapability.RuntimeCapabilityStatus
+  RuntimeCapabilities.{ HealthObservationCapability TranscriptOnlyConfigurationCapability
+                        ClaudeSubagentOutputSourcesCapability PiSubagentOutputSourcesCapability }
+  IndexedRecords.ItemCount
+  MalformedRecords.ItemCount
+  UnreadableRecords.ItemCount
+  SourceHealthCard.{ SourceKind SourceIdentifier SourceLocator SourceHealthStatus
+                     ScanLimits DiscoveredFiles IndexedRecords
+                     MalformedRecords UnreadableRecords }
+  SourceHealthCards.Vector<SourceHealthCard>
+  SessionCount.ItemCount
+  IndexSubagentCount.ItemCount
+  IndexOutputCount.ItemCount
+  TranscriptBlockCount.ItemCount
+  IndexHealth.{ SourceHealthStatus SessionCount IndexSubagentCount IndexOutputCount
+                TranscriptBlockCount }
+  RuntimeHealthObserved.{ RequestIdentifier RuntimeCapabilities SourceHealthCards IndexHealth }
+
+  SessionInventoryCards.Vector<SessionInventoryCard>
+  SessionArchiveRecordCards.Vector<SessionArchiveRecordCard>
+  SessionCards.Vector<SessionCard>
+  SubagentCards.Vector<SubagentCard>
+  OutputCards.Vector<OutputCard>
+  OutputSegmentCards.Vector<OutputSegmentCard>
+  TranscriptBlockCards.Vector<TranscriptBlockCard>
+  TranscriptBlockSearchMatches.Vector<TranscriptBlockSearchMatch>
+  SessionsInventoried.{ RequestIdentifier SessionInventoryCards SessionInventoryScanReport }
+  SessionLookedUp.{ RequestIdentifier SessionInventoryCards SessionInventoryScanReport }
+  SessionArchiveWritten.{ RequestIdentifier ArchivePath SessionArchiveRecordCard }
+  SessionArchiveQueried.{ RequestIdentifier ArchivePath SessionArchiveRecordCards }
+  SessionArchiveRead.{ RequestIdentifier ArchivePath SessionArchiveRecordProjection }
+  SessionsListed.{ RequestIdentifier SessionCards PageMetadata }
+  SubagentsListed.{ RequestIdentifier SubagentCards PageMetadata }
+  OutputsListed.{ RequestIdentifier OutputCards PageMetadata }
+  OutputSegmentsListed.{ RequestIdentifier OutputSegmentCards PageMetadata }
+  OutputEstimated.{ RequestIdentifier FragileOutputReference OutputReadRange SizeMetadata }
+  OutputRead.{ RequestIdentifier FragileOutputReference OutputReadRange SizeMetadata OutputTextExcerpt }
+  TranscriptBlocksListed.{ RequestIdentifier TranscriptBlockCards PageMetadata }
+  TranscriptBlockSearchMatch.{ TranscriptBlockCard TranscriptBlockSearchEvidence }
+  TranscriptBlocksSearched.{ RequestIdentifier TranscriptBlockSearchMatches PageMetadata }
+  TranscriptBlockEstimated.{ RequestIdentifier FragileTranscriptBlockReference SizeMetadata }
+  TranscriptBlockRead.{ RequestIdentifier FragileTranscriptBlockReference SizeMetadata
+                        TranscriptTextExcerpt }
+
+  OperationRejectionReason.[ Missing FragileReferenceStale FragileReferenceBroken Oversized
+                             Unsupported Unauthorized InvalidRequest InvalidRange InvalidQuery ]
+  RejectedFragileReference.[ Session.FragileSessionReference
+                             Subagent.FragileSubagentReference
+                             Output.FragileOutputReference
+                             OutputSegment.FragileOutputSegmentReference
+                             PageCursor.FragilePageCursor
+                             TranscriptBlock.FragileTranscriptBlockReference ]
+  OperationRejected.{ RequestIdentifier OperationKind OperationRejectionReason
+                      Option<RejectedFragileReference> }
+
+  ClientName.Option<ContractName>
+  VersionQuery.{ ClientName }
+  VersionReport.{ ContractName ContractVersion }
+  RejectionReason.[ InvalidTimeWindow UnsupportedProjection LimitExceeded
+                    ConfigurationUnavailable CollectionUnavailable ]
+  EvidenceRejected.{ RequestIdentifier OperationKind RejectionReason } ]

@@ -12,7 +12,7 @@ interfaces:
 
 - `Collect(EvidenceRequest)` returns `EvidenceCollected(EvidencePackage)` when
   the daemon has collected and normalized the requested evidence.
-- `Version(Version)` returns `VersionReported` so clients can identify the
+- `Version(VersionQuery)` returns `VersionReported` so clients can identify the
   contract surface they are speaking.
 - `ObserveHealth(RuntimeHealthRequest)` returns `RuntimeHealthObserved` with
   runtime capabilities, source health cards, and fragile-index health.
@@ -24,7 +24,7 @@ interfaces:
   fragile references, size metadata, provenance, and at most bounded previews.
 - `ListTranscriptBlocks` and `SearchTranscriptBlocks` expose whole logical
   transcript blocks with `TranscriptBlock` vocabulary, kind selection, bounded
-  previews, and canonical `dotos-text-query` query/evidence wrappers.
+  previews, and the flat transcript text query and its matching evidence.
 - `EstimateOutput` returns size metadata for a referenced output range.
 - `ReadOutput` is the explicit bounded output text read path.
 - `EstimateTranscriptBlock` and `ReadTranscriptBlock` are whole-block estimate
@@ -38,8 +38,8 @@ oversized, unsupported, unauthorized, invalid, and invalid-range requests.
 
 ## Boundary
 
-This crate owns the wire vocabulary, frame types, DOTOS examples, and round-trip
-witnesses. It does not own the daemon, transcript adapters, repository reads,
+This crate owns the wire vocabulary as one Ethos Signal declaration, its
+generated Rust projection, and the round-trip witnesses. It does not own the daemon, transcript adapters, repository reads,
 configuration, durable state, policy decisions, or synthesis. The daemon lowers
 these operations into its Signal/Nexus/SEMA runtime.
 
@@ -71,9 +71,19 @@ it is not a design-authority surface.
 ## Code map
 
 ```text
-schema/signal.schema     authored schema sketch for the signal contract
-generated/README.md      generation placeholder and exact follow-up command
-src/lib.rs               Rust contract types plus `signal_channel!`
-examples/canonical.dotos  canonical DOTOS request/reply examples
-tests/channel.rs         operation, DOTOS, frame, and boundary witnesses
+ethos/signal.ethos          the schema authority: queries, responses, and types
+build.rs                    regenerates from the ethos and refuses drift
+src/generated/signal.rs     the checked-in Rust projection
+src/lib.rs                  the module surface and the two source constants
+tests/generated_contract.rs rkyv frame and Datom text round-trip witnesses
 ```
+
+## Recursion and the wire
+
+Ethos declares recursive types and boxes the position that reaches back, but a
+Signal root also derives rkyv, whose derive cannot close the trait bounds of a
+self-reaching type: `Vec<Self>` and `Box<Self>` both overflow. The transcript
+text query and its matching evidence are therefore declared as flat node arenas
+— a vector of nodes plus a root index — with children named by index. This is
+recorded here because it is a property of the generator, not a choice this
+contract would otherwise have made.
