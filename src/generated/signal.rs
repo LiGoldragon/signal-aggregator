@@ -412,7 +412,7 @@ pub type RepositoryChanges = std::vec::Vec<RepositoryChange>;
 #[rustfmt::skip]
 pub type Truncations = std::vec::Vec<Truncation>;
 #[rustfmt::skip]
-pub type ReadFailures = std::vec::Vec<ReadFailure>;
+pub type ReadFailureRecords = std::vec::Vec<ReadFailure>;
 #[rustfmt::skip]
 pub type CollectedAt = Timestamp;
 #[rustfmt::skip]
@@ -430,7 +430,7 @@ pub struct EvidencePackage {
     pub transcript_segments: TranscriptSegments,
     pub repository_changes: RepositoryChanges,
     pub truncations: Truncations,
-    pub read_failures: ReadFailures,
+    pub read_failure_records: ReadFailureRecords,
 }
 #[rustfmt::skip]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq)]
@@ -580,7 +580,7 @@ pub enum SourceHealthStatus {
     ReadableIndexed,
     UnreadableRoot,
     DiscoveryTruncated,
-    MalformedRecords(MalformedRecords),
+    MalformedRecords,
     IndexStoreUnreadable,
 }
 #[rustfmt::skip]
@@ -644,10 +644,10 @@ pub enum SessionArchiveStatus {
 )]
 pub enum ScanLimitKind {
     ScanEntries,
-    DiscoveredFiles(DiscoveredFiles),
+    DiscoveredFiles,
     FileBytes,
     LineBytes,
-    ReadFailures(ReadFailures),
+    ReadFailures,
 }
 #[rustfmt::skip]
 pub type ScanLimit = ItemCount;
@@ -665,7 +665,7 @@ pub struct ScanLimitReport {
 #[rustfmt::skip]
 pub type ScanLimits = std::vec::Vec<ScanLimitReport>;
 #[rustfmt::skip]
-pub type DiscoveredFiles = ItemCount;
+pub type DiscoveredFileCount = ItemCount;
 #[rustfmt::skip]
 pub type IndexedSessions = ItemCount;
 #[rustfmt::skip]
@@ -684,7 +684,7 @@ pub struct SessionInventorySourceReport {
     pub source_locator: SourceLocator,
     pub session_inventory_completeness: SessionInventoryCompleteness,
     pub scan_limits: ScanLimits,
-    pub discovered_files: DiscoveredFiles,
+    pub discovered_file_count: DiscoveredFileCount,
     pub indexed_sessions: IndexedSessions,
     pub byte_count: ByteCount,
     pub earliest_modified_at: EarliestModifiedAt,
@@ -1442,7 +1442,7 @@ pub struct RuntimeCapabilities {
 #[rustfmt::skip]
 pub type IndexedRecords = ItemCount;
 #[rustfmt::skip]
-pub type MalformedRecords = ItemCount;
+pub type MalformedRecordCount = ItemCount;
 #[rustfmt::skip]
 pub type UnreadableRecords = ItemCount;
 #[rustfmt::skip]
@@ -1457,9 +1457,9 @@ pub struct SourceHealthCard {
     pub source_locator: SourceLocator,
     pub source_health_status: SourceHealthStatus,
     pub scan_limits: ScanLimits,
-    pub discovered_files: DiscoveredFiles,
+    pub discovered_file_count: DiscoveredFileCount,
     pub indexed_records: IndexedRecords,
-    pub malformed_records: MalformedRecords,
+    pub malformed_record_count: MalformedRecordCount,
     pub unreadable_records: UnreadableRecords,
 }
 #[rustfmt::skip]

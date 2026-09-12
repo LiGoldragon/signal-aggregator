@@ -1,7 +1,9 @@
 use signal::{ByteViewable, Restorable, Signal, Signalizable};
 use signal_aggregator::{
-    AuthoredStatusFilter, CardProjection, ListingOrder, OperationKind, OperationRejected,
-    OperationRejectionReason, PageRequest, Query, RejectedFragileReference, Response, SearchPhrase,
+    AuthoredStatusFilter, CardProjection, IndexHealth, ListingOrder, OperationKind,
+    OperationRejected, OperationRejectionReason, PageRequest, Query, RejectedFragileReference,
+    Response, RuntimeCapabilities, RuntimeCapabilityStatus, RuntimeHealthObserved, ScanLimitKind,
+    ScanLimitReport, SearchPhrase, SourceHealthCard, SourceHealthStatus, SourceKind, SourceLocator,
     SourceSelection, TextQueryNode, TextQueryTerm, TranscriptBlockFilter,
     TranscriptBlockKindSelection, TranscriptBlockSearchRequest, TranscriptBlockTextQuery,
 };
@@ -83,4 +85,74 @@ fn datom_round_trip_preserves_the_flat_text_query() {
         })
         .expect("actualize");
     assert_eq!(restored, query);
+}
+
+fn health() -> RuntimeHealthObserved {
+    RuntimeHealthObserved {
+        request_identifier: String::from("request-2"),
+        runtime_capabilities: RuntimeCapabilities {
+            health_observation_capability: RuntimeCapabilityStatus::Supported,
+            transcript_only_configuration_capability: RuntimeCapabilityStatus::Unsupported,
+            claude_subagent_output_sources_capability: RuntimeCapabilityStatus::Supported,
+            pi_subagent_output_sources_capability: RuntimeCapabilityStatus::Unsupported,
+        },
+        source_health_cards: vec![SourceHealthCard {
+            source_kind: SourceKind::Claude,
+            source_identifier: String::from("claude"),
+            source_locator: SourceLocator {
+                filesystem_path: String::from("/home/li/.claude/projects"),
+                root_relative_path_option: None,
+            },
+            source_health_status: SourceHealthStatus::MalformedRecords,
+            scan_limits: vec![ScanLimitReport {
+                scan_limit_kind: ScanLimitKind::ReadFailures,
+                scan_limit: 1024,
+                filesystem_path_option: None,
+            }],
+            discovered_file_count: 12,
+            indexed_records: 11,
+            malformed_record_count: 1,
+            unreadable_records: 0,
+        }],
+        index_health: IndexHealth {
+            source_health_status: SourceHealthStatus::ReadableIndexed,
+            session_count: 3,
+            index_subagent_count: 4,
+            index_output_count: 5,
+            transcript_block_count: 6,
+        },
+    }
+}
+
+/// A scan limit names a kind and nothing else. When a variant head spells a
+/// declared type, Ethos Zero gives the variant that type as a payload, and
+/// `ScanLimitKind::ReadFailures` was generated carrying the read failures
+/// themselves. Building these two by their bare heads and carrying them over
+/// the wire is the witness that they stay bare.
+#[test]
+fn a_scan_limit_kind_and_a_health_status_cross_the_wire_as_bare_heads() {
+    let response = Response::RuntimeHealthObserved(health());
+    let outgoing = response.signalize().expect("archive response");
+    let incoming = Signal::<Response>::from(outgoing.bytes().to_vec());
+    assert_eq!(incoming.restore().expect("restore response"), response);
+}
+
+#[cfg(feature = "datom")]
+#[test]
+fn datom_round_trip_preserves_a_bare_scan_limit_kind() {
+    use datom_codec::{Actualizing, Budget, Datomizable, Potential};
+    use protos::{Protosizable, ReaderBudget, Textualizable};
+    let response = Response::RuntimeHealthObserved(health());
+    let rendered = response.clone().datomize(vec![]).protosize().textualize();
+    assert!(rendered.contains("ReadFailures"));
+    let mut pending = Potential::<Response>::from(rendered);
+    let restored = pending
+        .actualize(&mut Budget {
+            remaining: 65536,
+            reader: ReaderBudget { remaining: 65536 },
+            depth: 0,
+            maximum_depth: 256,
+        })
+        .expect("actualize");
+    assert_eq!(restored, response);
 }

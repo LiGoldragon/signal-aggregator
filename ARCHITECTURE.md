@@ -78,6 +78,18 @@ src/lib.rs                  the module surface and the two source constants
 tests/generated_contract.rs rkyv frame and Datom text round-trip witnesses
 ```
 
+## A bare variant may not spell a declared type
+
+Ethos Zero resolves a bare enum variant head against the type table, so a
+variant whose name is also a declared type silently becomes a
+payload-carrying variant. `ScanLimitKind::ReadFailures` was generated
+carrying a `Vec<ReadFailure>` — a limit kind holding the failures — and
+`ScanLimitKind::DiscoveredFiles` and `SourceHealthStatus::MalformedRecords`
+each carried a duplicate count. The count and vector aliases are therefore
+named `DiscoveredFileCount`, `MalformedRecordCount` and
+`ReadFailureRecords`, distinct from every variant head in this file. Anyone
+adding a variant here must check it against the type declarations.
+
 ## Recursion and the wire
 
 Ethos declares recursive types and boxes the position that reaches back, but a

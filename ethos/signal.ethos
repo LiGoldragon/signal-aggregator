@@ -147,11 +147,11 @@ Signal
   TranscriptSegments.Vector<TranscriptSegment>
   RepositoryChanges.Vector<RepositoryChange>
   Truncations.Vector<Truncation>
-  ReadFailures.Vector<ReadFailure>
+  ReadFailureRecords.Vector<ReadFailure>
   CollectedAt.Timestamp
   EvidencePackage.{ PackageIdentifier RequestIdentifier TimeWindow CollectedAt
                     SourceVolumes TranscriptSegments RepositoryChanges
-                    Truncations ReadFailures }
+                    Truncations ReadFailureRecords }
 
   SizeCertainty.[ Exact Estimated Unknown ]
   SegmentCount.Option<ItemCount>
@@ -187,13 +187,13 @@ Signal
   ScanLimitReport.{ ScanLimitKind ScanLimit Option<FilesystemPath> }
 
   ScanLimits.Vector<ScanLimitReport>
-  DiscoveredFiles.ItemCount
+  DiscoveredFileCount.ItemCount
   IndexedSessions.ItemCount
   EarliestModifiedAt.Option<Timestamp>
   LatestModifiedAt.Option<Timestamp>
   SessionInventorySourceReport.{ SourceKind SourceIdentifier SourceLocator
                                  SessionInventoryCompleteness ScanLimits
-                                 DiscoveredFiles IndexedSessions ByteCount
+                                 DiscoveredFileCount IndexedSessions ByteCount
                                  EarliestModifiedAt LatestModifiedAt }
   SessionInventorySourceReports.Vector<SessionInventorySourceReport>
   TotalSessions.ItemCount
@@ -340,11 +340,11 @@ Signal
   RuntimeCapabilities.{ HealthObservationCapability TranscriptOnlyConfigurationCapability
                         ClaudeSubagentOutputSourcesCapability PiSubagentOutputSourcesCapability }
   IndexedRecords.ItemCount
-  MalformedRecords.ItemCount
+  MalformedRecordCount.ItemCount
   UnreadableRecords.ItemCount
   SourceHealthCard.{ SourceKind SourceIdentifier SourceLocator SourceHealthStatus
-                     ScanLimits DiscoveredFiles IndexedRecords
-                     MalformedRecords UnreadableRecords }
+                     ScanLimits DiscoveredFileCount IndexedRecords
+                     MalformedRecordCount UnreadableRecords }
   SourceHealthCards.Vector<SourceHealthCard>
   SessionCount.ItemCount
   IndexSubagentCount.ItemCount
