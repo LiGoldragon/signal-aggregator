@@ -1,11 +1,14 @@
 use signal::{ByteViewable, Restorable, Signal, Signalizable};
 use signal_aggregator::{
-    AuthoredStatusFilter, CardProjection, IndexHealth, ListingOrder, OperationKind,
-    OperationRejected, OperationRejectionReason, PageRequest, Query, RejectedFragileReference,
-    Response, RuntimeCapabilities, RuntimeCapabilityStatus, RuntimeHealthObserved, ScanLimitKind,
-    ScanLimitReport, SearchPhrase, SourceHealthCard, SourceHealthStatus, SourceKind, SourceLocator,
-    SourceSelection, TextQueryNode, TextQueryTerm, TranscriptBlockFilter,
-    TranscriptBlockKindSelection, TranscriptBlockSearchRequest, TranscriptBlockTextQuery,
+    AuthoredStatus, AuthoredStatusFilter, CardProjection, ContainsEvidence, IndexHealth,
+    ListingOrder, MatchEvidence, NearEvidence, NearOccurrencePair, NearTextQuery, Occurrence,
+    OperationKind, OperationRejected, OperationRejectionReason, PageMetadata, PageRequest, Query,
+    RejectedFragileReference, Response, RuntimeCapabilities, RuntimeCapabilityStatus,
+    RuntimeHealthObserved, ScanLimitKind, ScanLimitReport, SearchPhrase, SizeCertainty,
+    SizeMetadata, SourceHealthCard, SourceHealthStatus, SourceKind, SourceLocator, SourceSelection,
+    TextQuery, TextQueryTerm, TranscriptBlockCard, TranscriptBlockFilter, TranscriptBlockKind,
+    TranscriptBlockKindSelection, TranscriptBlockProvenance, TranscriptBlockSearchMatch,
+    TranscriptBlockSearchRequest, TranscriptBlockTextAvailability, TranscriptBlocksSearched,
 };
 
 fn search_request() -> TranscriptBlockSearchRequest {
@@ -20,16 +23,12 @@ fn search_request() -> TranscriptBlockSearchRequest {
             authored_status_filter: AuthoredStatusFilter::AnyAuthoredStatus,
             time_window_option: None,
         },
-        transcript_block_text_query: TranscriptBlockTextQuery {
-            text_query_nodes: vec![
-                TextQueryNode::Contains(TextQueryTerm::Word(String::from("alpha"))),
-                TextQueryNode::Contains(TextQueryTerm::Phrase(SearchPhrase {
-                    search_words: vec![String::from("bounded"), String::from("text")],
-                })),
-                TextQueryNode::AllOf(vec![0, 1]),
-            ],
-            text_query_root: 2,
-        },
+        transcript_block_text_query: TextQuery::AllOf(vec![
+            TextQuery::Contains(TextQueryTerm::Word(String::from("alpha"))),
+            TextQuery::Contains(TextQueryTerm::Phrase(SearchPhrase {
+                search_words: vec![String::from("bounded"), String::from("text")],
+            })),
+        ]),
         page_request: PageRequest {
             page_limit: 25,
             page_cursor: None,
@@ -63,6 +62,133 @@ fn aggregator_response_restores_from_fresh_peer_bytes() {
     assert_eq!(incoming.restore().expect("restore response"), response);
 }
 
+fn word(text: &str) -> TextQueryTerm {
+    TextQueryTerm::Word(String::from(text))
+}
+
+/// A query tree nested four deep, every recursive position used: `AllOf` and
+/// `AnyOf` holding subtrees, and `Not` boxing a `Not`.
+fn nested_text_query() -> TextQuery {
+    TextQuery::AnyOf(vec![
+        TextQuery::AllOf(vec![
+            TextQuery::Contains(word("alpha")),
+            TextQuery::Not(Box::new(TextQuery::Not(Box::new(TextQuery::AnyOf(vec![
+                TextQuery::Contains(word("beta")),
+                TextQuery::AllOf(vec![]),
+            ]))))),
+        ]),
+        TextQuery::Near(NearTextQuery {
+            left_text_query_term: word("gamma"),
+            right_text_query_term: TextQueryTerm::Phrase(SearchPhrase {
+                search_words: vec![String::from("delta"), String::from("epsilon")],
+            }),
+            word_distance: 3,
+        }),
+        TextQuery::Not(Box::new(TextQuery::AllOf(vec![TextQuery::Contains(word(
+            "zeta",
+        ))]))),
+    ])
+}
+
+/// The evidence tree that answers [`nested_text_query`]'s shape.
+fn nested_match_evidence() -> MatchEvidence {
+    MatchEvidence::AnyOf(vec![
+        MatchEvidence::AllOf(vec![
+            MatchEvidence::Contains(ContainsEvidence {
+                text_query_term: word("alpha"),
+                occurrences: vec![Occurrence {
+                    start_word_position: 4,
+                    end_word_position: 5,
+                }],
+            }),
+            MatchEvidence::Not,
+        ]),
+        MatchEvidence::Near(NearEvidence {
+            left_text_query_term: word("gamma"),
+            right_text_query_term: word("delta"),
+            word_distance: 3,
+            near_occurrence_pairs: vec![NearOccurrencePair {
+                left_occurrence: Occurrence {
+                    start_word_position: 10,
+                    end_word_position: 11,
+                },
+                right_occurrence: Occurrence {
+                    start_word_position: 12,
+                    end_word_position: 14,
+                },
+                occurrence_gap: 1,
+            }],
+        }),
+        MatchEvidence::AllOf(vec![MatchEvidence::AnyOf(vec![MatchEvidence::Not])]),
+    ])
+}
+
+fn nested_search_response() -> Response {
+    Response::TranscriptBlocksSearched(TranscriptBlocksSearched {
+        request_identifier: String::from("request-3"),
+        transcript_block_search_matches: vec![TranscriptBlockSearchMatch {
+            transcript_block_card: TranscriptBlockCard {
+                fragile_transcript_block_reference: String::from("block-1"),
+                fragile_session_reference: String::from("session-1"),
+                fragile_subagent_reference_option: None,
+                subagent_task_metadata_option: None,
+                transcript_block_kind: TranscriptBlockKind::AgentResponse,
+                transcript_block_index: 7,
+                transcript_block_provenance: TranscriptBlockProvenance {
+                    source_kind: SourceKind::Claude,
+                    source_identifier: String::from("claude"),
+                    authored_status: AuthoredStatus::AgentAuthored,
+                    observed_at: None,
+                },
+                line_range_option: None,
+                byte_range_option: None,
+                size_metadata: SizeMetadata {
+                    byte_count_option: Some(120),
+                    line_count_option: None,
+                    segment_count: None,
+                    size_certainty: SizeCertainty::Exact,
+                },
+                transcript_block_text_availability: TranscriptBlockTextAvailability::ReadableText,
+                transcript_text_excerpt_option: None,
+            },
+            transcript_block_search_evidence: nested_match_evidence(),
+        }],
+        page_metadata: PageMetadata {
+            page_limit: 25,
+            returned_items: 1,
+            total_items: Some(1),
+            next_page_cursor: None,
+            listing_order: ListingOrder::NewestFirst,
+        },
+    })
+}
+
+/// The recursive query and evidence trees archive through rkyv and restore
+/// equal, both through rkyv directly (which validates the archive) and
+/// through the Signal frame a peer receives.
+#[test]
+fn a_nested_query_and_its_nested_evidence_round_trip_through_rkyv() {
+    let mut request = search_request();
+    request.transcript_block_text_query = nested_text_query();
+    let query = Query::SearchTranscriptBlocks(request);
+    let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&query).expect("archive query");
+    let restored = rkyv::from_bytes::<Query, rkyv::rancor::Error>(&bytes).expect("restore query");
+    assert_eq!(restored, query);
+    let incoming = Signal::<Query>::from(query.signalize().expect("frame").bytes().to_vec());
+    assert_eq!(incoming.restore().expect("restore framed query"), query);
+
+    let response = nested_search_response();
+    let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&response).expect("archive response");
+    let restored =
+        rkyv::from_bytes::<Response, rkyv::rancor::Error>(&bytes).expect("restore response");
+    assert_eq!(restored, response);
+    let incoming = Signal::<Response>::from(response.signalize().expect("frame").bytes().to_vec());
+    assert_eq!(
+        incoming.restore().expect("restore framed response"),
+        response
+    );
+}
+
 #[test]
 fn malformed_peer_bytes_are_rejected() {
     assert!(Signal::<Query>::from(vec![0xff, 0, 1]).restore().is_err());
@@ -70,7 +196,7 @@ fn malformed_peer_bytes_are_rejected() {
 
 #[cfg(feature = "datom")]
 #[test]
-fn datom_round_trip_preserves_the_flat_text_query() {
+fn datom_round_trip_preserves_the_text_query_tree() {
     use datom_codec::{Actualizing, Budget, Datomizable, Potential};
     use protos::{Protosizable, ReaderBudget, Textualizable};
     let query = Query::SearchTranscriptBlocks(search_request());
@@ -154,5 +280,32 @@ fn datom_round_trip_preserves_a_bare_scan_limit_kind() {
             maximum_depth: 256,
         })
         .expect("actualize");
+    assert_eq!(restored, response);
+}
+
+#[cfg(feature = "datom")]
+#[test]
+fn datom_round_trip_preserves_a_nested_query_and_its_nested_evidence() {
+    use datom_codec::{Actualizing, Budget, Datomizable, Potential};
+    use protos::{Protosizable, ReaderBudget, Textualizable};
+    let budget = || Budget {
+        remaining: 65536,
+        reader: ReaderBudget { remaining: 65536 },
+        depth: 0,
+        maximum_depth: 256,
+    };
+    let mut request = search_request();
+    request.transcript_block_text_query = nested_text_query();
+    let query = Query::SearchTranscriptBlocks(request);
+    let rendered = query.clone().datomize(vec![]).protosize().textualize();
+    let restored = Potential::<Query>::from(rendered)
+        .actualize(&mut budget())
+        .expect("actualize query");
+    assert_eq!(restored, query);
+    let response = nested_search_response();
+    let rendered = response.clone().datomize(vec![]).protosize().textualize();
+    let restored = Potential::<Response>::from(rendered)
+        .actualize(&mut budget())
+        .expect("actualize response");
     assert_eq!(restored, response);
 }

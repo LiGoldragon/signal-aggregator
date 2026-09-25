@@ -16,13 +16,14 @@ from it and refuses to build when `src/generated/signal.rs` has drifted. The
 portable rkyv frame, its kinds, and the four-byte length prefix come from
 `signal`; the Datom text projection is the `datom` feature.
 
-## The text query is a flat node arena
+## The text query is a recursive tree
 
-`TranscriptBlockTextQuery` and `TranscriptBlockSearchEvidence` each carry a
-vector of nodes and a root index rather than a recursive tree. A wire value is
-an rkyv archive, and rkyv's derive cannot close the trait bounds of a type that
-reaches itself. Children are named by their index in the same vector; an index
-outside the vector is an `InvalidQuery` rejection.
+`TranscriptBlockTextQuery` is a `TextQuery` and `TranscriptBlockSearchEvidence`
+is a `MatchEvidence`: each is a recursive enum whose `AllOf` and `AnyOf` carry
+their children directly and whose `Not` carries its operand (the query's) or
+nothing (the evidence's). Ethos Zero 13 closes rkyv's trait bounds over the
+recursion, so the tree crosses the wire as it is written, with no index to
+dangle.
 
 ## Range and ordering semantics
 

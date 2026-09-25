@@ -2,8 +2,7 @@
 ;
 ; Bounded collection requests, normalized evidence packages, metadata-first
 ; output discovery, and structured transcript block search and read. The
-; transcript text query and its matching evidence are carried as flat node
-; arenas: the wire frame is an rkyv archive, which admits no recursive type.
+; transcript text query and its matching evidence are recursive trees.
 Signal
 []
 [ Collect.EvidenceRequest
@@ -232,16 +231,13 @@ Signal
   LeftTextQueryTerm.TextQueryTerm
   RightTextQueryTerm.TextQueryTerm
   NearTextQuery.{ LeftTextQueryTerm RightTextQueryTerm WordDistance }
-  TextQueryNodeIndex.Integer
-  TextQueryNodeIndices.Vector<TextQueryNodeIndex>
-  TextQueryNode.[ Contains.TextQueryTerm
-                  AllOf.TextQueryNodeIndices
-                  AnyOf.TextQueryNodeIndices
-                  Not.TextQueryNodeIndex
-                  Near.NearTextQuery ]
-  TextQueryRoot.TextQueryNodeIndex
-  TextQueryNodes.Vector<TextQueryNode>
-  TranscriptBlockTextQuery.{ TextQueryNodes TextQueryRoot }
+  TextQuery.[ Contains.TextQueryTerm
+              AllOf.TextQueries
+              AnyOf.TextQueries
+              Not.TextQuery
+              Near.NearTextQuery ]
+  TextQueries.Vector<TextQuery>
+  TranscriptBlockTextQuery.TextQuery
 
   WordPosition.Integer
   StartWordPosition.WordPosition
@@ -255,16 +251,13 @@ Signal
   NearOccurrencePair.{ LeftOccurrence RightOccurrence OccurrenceGap }
   NearOccurrencePairs.Vector<NearOccurrencePair>
   NearEvidence.{ LeftTextQueryTerm RightTextQueryTerm WordDistance NearOccurrencePairs }
-  MatchEvidenceIndex.Integer
-  MatchEvidenceIndices.Vector<MatchEvidenceIndex>
-  MatchEvidenceNode.[ Contains.ContainsEvidence
-                      AllOf.MatchEvidenceIndices
-                      AnyOf.MatchEvidenceIndices
-                      Not
-                      Near.NearEvidence ]
-  MatchEvidenceRoot.MatchEvidenceIndex
-  MatchEvidenceNodes.Vector<MatchEvidenceNode>
-  TranscriptBlockSearchEvidence.{ MatchEvidenceNodes MatchEvidenceRoot }
+  MatchEvidence.[ Contains.ContainsEvidence
+                  AllOf.MatchEvidences
+                  AnyOf.MatchEvidences
+                  Not
+                  Near.NearEvidence ]
+  MatchEvidences.Vector<MatchEvidence>
+  TranscriptBlockSearchEvidence.MatchEvidence
 
   TranscriptBlockKind.[ UserPrompt AgentResponse ToolCall ToolResult Inference
                         SystemInstruction Attachment SessionEvent Unclassified ]

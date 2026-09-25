@@ -24,7 +24,7 @@ interfaces:
   fragile references, size metadata, provenance, and at most bounded previews.
 - `ListTranscriptBlocks` and `SearchTranscriptBlocks` expose whole logical
   transcript blocks with `TranscriptBlock` vocabulary, kind selection, bounded
-  previews, and the flat transcript text query and its matching evidence.
+  previews, and the recursive transcript text query and its matching evidence.
 - `EstimateOutput` returns size metadata for a referenced output range.
 - `ReadOutput` is the explicit bounded output text read path.
 - `EstimateTranscriptBlock` and `ReadTranscriptBlock` are whole-block estimate
@@ -92,10 +92,13 @@ adding a variant here must check it against the type declarations.
 
 ## Recursion and the wire
 
-Ethos declares recursive types and boxes the position that reaches back, but a
-Signal root also derives rkyv, whose derive cannot close the trait bounds of a
-self-reaching type: `Vec<Self>` and `Box<Self>` both overflow. The transcript
-text query and its matching evidence are therefore declared as flat node arenas
-— a vector of nodes plus a root index — with children named by index. This is
-recorded here because it is a property of the generator, not a choice this
-contract would otherwise have made.
+The transcript text query (`TextQuery`) and its matching evidence
+(`MatchEvidence`) are directly recursive enums. Ethos Zero from 11.0.0 marks
+every self-reaching position `#[rkyv(omit_bounds)]`, states the serializer,
+deserializer and validator bounds once, and boxes only the position that closes
+a by-value cycle (`TextQuery::Not`). Before that, rkyv's derive could not close
+the bounds of `Vec<Self>` or `Box<Self>`, and both trees were declared as flat
+node arenas indexed from a root; the arenas existed for that reason alone.
+
+A tree's depth is bounded by the frame's size, not by the contract. A reader of
+untrusted frames bounds the nesting it will validate.

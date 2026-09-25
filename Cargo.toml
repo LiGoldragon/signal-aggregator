@@ -1,6 +1,6 @@
 [package]
 name = "signal-aggregator"
-version = "0.9.0"
+version = "1.0.0"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -24,7 +24,7 @@ rkyv = { version = "0.8", default-features = false, features = ["std", "bytechec
 signal = { git = "https://github.com/LiGoldragon/signal", rev = "48ae17b485f2781e8ec1ca02a7fe04ad28a37f9f", default-features = false }
 
 [build-dependencies]
-ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "b232d35e03011161fe7ec9129ad99a9914413348" }
+ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "407f938d083a89236ef8c2c6e8a90561ec6b637a" }
 
 [lints.rust]
 unsafe_code = "forbid"
