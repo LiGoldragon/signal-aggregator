@@ -1,5 +1,5 @@
 # signal-aggregator skills
 
 This is a contract repo. Keep daemon runtime, adapter implementation, storage,
-and policy out of this crate. Public operations are contract-local verbs; SEMA
+and policy out of this crate. Public operations are contract-local verbs; MEMORY
 classification stays in the `aggregator` runtime.

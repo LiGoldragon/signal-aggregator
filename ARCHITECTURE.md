@@ -41,7 +41,7 @@ oversized, unsupported, unauthorized, invalid, and invalid-range requests.
 This crate owns the wire vocabulary as one Ethos Signal declaration, its
 generated Rust projection, and the round-trip witnesses. It does not own the daemon, transcript adapters, repository reads,
 configuration, durable state, policy decisions, or synthesis. The daemon lowers
-these operations into its Signal/Nexus/SEMA runtime.
+these operations into its Signal/Nexus/MEMORY runtime.
 
 The evidence package is collection-only. It may include source volumes,
 timestamps, paths or identifiers, repository changes, transcript segment
